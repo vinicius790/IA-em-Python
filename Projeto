@@ -1,0 +1,27 @@
+project/
+│
+├── app/
+│   ├── main.py
+│   ├── neural_network.py
+│   ├── predict.py
+│   └── endpoints.py
+│
+├── data/
+│   └── raw/  # Armazene datasets brutos
+│
+├── models/
+│   └── neural_network_model.h5
+│
+├── notebooks/
+│   └── exploratory_data_analysis.ipynb  # Notebooks para análise exploratória
+│
+├── tests/
+│   └── test_main.py
+│   └── test_neural_network.py
+│
+├── logs/
+│   └── app.log
+│
+├── Dockerfile
+├── requirements.txt
+└── README.md
