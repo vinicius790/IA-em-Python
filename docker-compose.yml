@@ -1,0 +1,43 @@
+# Uso: copie .env.example para .env, defina API_KEY e rode `docker compose up --build -d`.
+# As portas são publicadas só em 127.0.0.1.
+services:
+  api:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      ENVIRONMENT: production
+      API_KEY: ${API_KEY:?defina API_KEY no arquivo .env}
+      ARTIFACT_SIGNING_KEY: ${ARTIFACT_SIGNING_KEY:-}
+      CORS_ORIGINS: http://localhost:8000
+    volumes:
+      - app-state:/app/state
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.8.1
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./ops/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:12.2.1
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?defina GRAFANA_ADMIN_PASSWORD no arquivo .env}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  app-state:
+  grafana-data:

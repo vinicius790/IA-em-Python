@@ -1,0 +1,22 @@
+site_name: Iris AI Platform
+site_description: Plataforma didática de ML/MLOps sobre o dataset Iris
+docs_dir: docs
+theme:
+  name: material
+  language: pt-BR
+plugins:
+  - search
+nav:
+  - Início: index.md
+  - Arquitetura: arquitetura.md
+  - Arquitetura MLOps & Dados: ARCHITECTURE.md
+  - API: api.md
+  - MLOps: mlops.md
+  - Datasets, canário e papéis: datasets-canario-papeis.md
+  - Operação: operacao.md
+  - Histórico:
+      - Arquitetura 3.0: historico/Projeto-arquitetura-3.0.md
+      - README 4.0: historico/README_4_0.md
+      - README 5.0: historico/README_5_0.md
+      - README 6.0: historico/README_6_0.md
+      - README 7.0: historico/README_7_0.md

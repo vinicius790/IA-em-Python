@@ -1,0 +1,7 @@
+apiVersion: v2
+name: iris-ai-platform
+description: Iris AI Platform (API FastAPI com SQLite e registry de modelos em volume persistente)
+type: application
+version: 8.2.0
+# Mantido igual a app/__init__.py por tests/test_cli_and_database.py::test_version_has_a_single_source
+appVersion: "8.2.0"

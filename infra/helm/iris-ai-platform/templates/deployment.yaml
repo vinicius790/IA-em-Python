@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iris-ai-platform.fullname" . }}
+  labels:
+    {{- include "iris-ai-platform.labels" . | nindent 4 }}
+spec:
+  # Uma réplica e Recreate: SQLite e o registry em arquivo não admitem dois pods escrevendo.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "iris-ai-platform.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "iris-ai-platform.labels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: ENVIRONMENT
+              value: {{ .Values.environment | quote }}
+            - name: CORS_ORIGINS
+              value: {{ .Values.corsOrigins | quote }}
+            - name: DATABASE_URL
+              value: "sqlite:////app/state/data/iris.db"
+            - name: DATA_DIR
+              value: /app/state/data
+            - name: MODEL_DIR
+              value: /app/state/models
+            - name: ARTIFACT_DIR
+              value: /app/state/artifacts
+          envFrom:
+            - secretRef:
+                name: {{ required "existingSecret é obrigatório (Secret com API_KEY)" .Values.existingSecret }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: state
+              mountPath: /app/state
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: {{ include "iris-ai-platform.fullname" . }}
+        - name: tmp
+          emptyDir: {}

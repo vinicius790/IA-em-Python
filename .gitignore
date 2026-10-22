@@ -1,0 +1,41 @@
+# Arquivos locais da reorganização (não fazem parte do projeto)
+BACKUP_ORIGINAL_antes_de_organizar.zip
+LOG_REORGANIZACAO.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+site/
+
+# Ambientes e segredos
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+
+# Estado gerado em execução
+data/*.db
+data/*.db-*
+data/catalog.json
+data/catalog.tmp
+models/
+artifacts/
+mlruns/
+
+# IDE / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

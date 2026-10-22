@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Iris AI Platform · Console</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+  <header>
+    <div>
+      <h1>Iris AI Platform</h1>
+      <p id="versao" class="muted">carregando…</p>
+    </div>
+    <form id="form-chave" class="linha">
+      <label for="chave">API key</label>
+      <input id="chave" type="password" autocomplete="off" placeholder="vazia em development">
+      <button type="submit">Usar chave</button>
+    </form>
+  </header>
+
+  <main id="conteudo">
+    <p id="aviso" role="status" aria-live="polite"></p>
+
+    <section aria-labelledby="t-resumo">
+      <h2 id="t-resumo">Resumo</h2>
+      <dl id="cards" class="cards"></dl>
+      <button type="button" id="atualizar">Atualizar</button>
+    </section>
+
+    <section aria-labelledby="t-treino">
+      <h2 id="t-treino">Treino</h2>
+      <form id="form-treino" class="linha">
+        <label for="modelo-treino">Modelo</label>
+        <select id="modelo-treino"></select>
+        <button type="submit">Treinar (job assíncrono)</button>
+        <button type="button" id="dry-run">Dry-run do pipeline</button>
+      </form>
+      <pre id="saida-treino" tabindex="0" aria-label="Resultado do treino"></pre>
+    </section>
+
+    <section aria-labelledby="t-registry">
+      <h2 id="t-registry">Registry de modelos</h2>
+      <div class="rolagem">
+        <table>
+          <caption class="sr">Versões registradas, estágio e métricas de teste</caption>
+          <thead>
+            <tr><th scope="col">Versão</th><th scope="col">Estágio</th><th scope="col">Acurácia</th><th scope="col">F1 macro</th><th scope="col">Latência (ms)</th><th scope="col">Ação</th></tr>
+          </thead>
+          <tbody id="modelos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="t-predicao">
+      <h2 id="t-predicao">Predição e explicação</h2>
+      <form id="form-predicao" class="grade">
+        <label>Modelo <select id="modelo-predicao"></select></label>
+        <label>Comprimento da sépala <input name="sepal_length" type="number" step="0.1" min="0.1" max="20" value="5.1" required></label>
+        <label>Largura da sépala <input name="sepal_width" type="number" step="0.1" min="0.1" max="20" value="3.5" required></label>
+        <label>Comprimento da pétala <input name="petal_length" type="number" step="0.1" min="0.1" max="20" value="1.4" required></label>
+        <label>Largura da pétala <input name="petal_width" type="number" step="0.1" min="0.1" max="20" value="0.2" required></label>
+        <button type="submit">Prever e explicar</button>
+      </form>
+      <p id="resultado" role="status" aria-live="polite"></p>
+      <table id="tabela-shap" hidden>
+        <caption>Contribuição de cada medida para a probabilidade da classe prevista (valores de Shapley)</caption>
+        <thead><tr><th scope="col">Feature</th><th scope="col">Valor</th><th scope="col">Contribuição</th></tr></thead>
+        <tbody id="shap"></tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="t-monitor">
+      <h2 id="t-monitor">Monitoramento</h2>
+      <form id="form-monitor" class="linha">
+        <label for="modelo-monitor">Modelo</label>
+        <select id="modelo-monitor"></select>
+        <button type="submit">Consultar</button>
+      </form>
+      <pre id="saida-monitor" tabindex="0" aria-label="Resumo de monitoramento"></pre>
+    </section>
+  </main>
+
+  <footer class="muted">
+    <a href="/docs">OpenAPI (Swagger)</a> · <a href="/api/v1/metrics">Métricas Prometheus</a>
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>

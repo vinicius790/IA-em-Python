@@ -1,0 +1,32 @@
+# A aplicação guarda o banco SQLite e o registry de modelos em disco local.
+# Por isso roda com UMA réplica; escalar horizontalmente exige antes um banco
+# externo e um armazenamento de artefatos compartilhado.
+image:
+  repository: iris-ai-platform
+  # Vazio = usa o appVersion do chart.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Secret já existente com a chave API_KEY (obrigatória: a imagem roda com
+# ENVIRONMENT=production e não sobe sem ela). Opcional: ARTIFACT_SIGNING_KEY.
+#   kubectl create secret generic iris-ai-secrets --from-literal=API_KEY=<valor>
+existingSecret: iris-ai-secrets
+
+environment: production
+corsOrigins: ""
+
+service:
+  type: ClusterIP
+  port: 80
+
+persistence:
+  size: 1Gi
+  storageClassName: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "2"
+    memory: 2Gi

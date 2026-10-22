@@ -1,0 +1,15 @@
+{
+  "title": "Iris AI Platform",
+  "uid": "iris-ai-platform",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "30s",
+  "panels": [
+    {"id": 1, "type": "timeseries", "title": "Requisições por segundo (por rota)", "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}, "targets": [{"expr": "sum by (method, path, status) (rate(iris_api_requests_total[1m]))", "legendFormat": "{{method}} {{path}} {{status}}"}]},
+    {"id": 2, "type": "timeseries", "title": "Latência média de predição (s)", "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}, "targets": [{"expr": "rate(iris_prediction_duration_seconds_sum[1m]) / rate(iris_prediction_duration_seconds_count[1m])", "legendFormat": "{{model}}"}]},
+    {"id": 3, "type": "timeseries", "title": "Treinos na última hora", "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}, "targets": [{"expr": "increase(iris_training_runs_total[1h])", "legendFormat": "{{model}} {{status}}"}]},
+    {"id": 4, "type": "timeseries", "title": "Nota de saúde do modelo (último snapshot)", "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}, "targets": [{"expr": "iris_model_health_score", "legendFormat": "{{model}}"}]},
+    {"id": 5, "type": "timeseries", "title": "Maior PSI por modelo (último snapshot)", "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8}, "targets": [{"expr": "iris_model_drift_psi_max", "legendFormat": "{{model}}"}]},
+    {"id": 6, "type": "timeseries", "title": "Snapshots de monitoramento por status de drift", "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8}, "targets": [{"expr": "increase(iris_drift_reports_total[1h])", "legendFormat": "{{status}}"}]}
+  ]
+}
