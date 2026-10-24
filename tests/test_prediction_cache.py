@@ -3,9 +3,7 @@
 import concurrent.futures
 import time
 
-import pytest
-
-from app.platform.cache import PredictionCache, cached_prediction, make_cache_key
+from app.platform.cache import PredictionCache, cached_prediction
 
 
 def test_prediction_cache_basic_get_set_miss():

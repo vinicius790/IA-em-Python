@@ -1,7 +1,5 @@
 """Testes do Pipeline Integrado de Explicabilidade (XAI) e Feature Importance."""
 
-import numpy as np
-import pandas as pd
 import pytest
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression

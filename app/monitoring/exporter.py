@@ -1,6 +1,7 @@
 import json
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 
 class PredictionLogExporter:
     def __init__(self, output_dir: str = "app/monitoring/"):
@@ -13,7 +14,7 @@ class PredictionLogExporter:
             "timestamp": datetime.utcnow().isoformat(),
             "input": input_data,
             "prediction": prediction,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
         }
         with open(self.log_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")

@@ -7,10 +7,8 @@
 """
 
 import json
-from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import pytest
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -29,8 +27,6 @@ from app.modeling.explainability import (
     ExplainabilityPipeline,
     ExplainabilityReport,
     LocalPredictionDecomposition,
-    compute_kernel_shap,
-    pure_permutation_importance,
 )
 from app.monitoring.drift import (
     detect_drift,
@@ -316,7 +312,8 @@ def test_cli_drift_check():
 def test_cli_audit_export(tmp_path):
     md_out = tmp_path / "cli_audit.md"
     result_md = runner.invoke(
-        cli_app, ["audit-export", "--model", "logistic_regression", "--output", str(md_out), "--format", "markdown"]
+        cli_app,
+        ["audit-export", "--model", "logistic_regression", "--output", str(md_out), "--format", "markdown"],
     )
     assert result_md.exit_code == 0, result_md.output
     assert md_out.exists()
@@ -324,7 +321,8 @@ def test_cli_audit_export(tmp_path):
 
     json_out = tmp_path / "cli_audit.json"
     result_json = runner.invoke(
-        cli_app, ["audit-export", "--model", "logistic_regression", "--output", str(json_out), "--format", "json"]
+        cli_app,
+        ["audit-export", "--model", "logistic_regression", "--output", str(json_out), "--format", "json"],
     )
     assert result_json.exit_code == 0, result_json.output
     assert json_out.exists()

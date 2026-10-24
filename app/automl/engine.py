@@ -59,7 +59,7 @@ class TabularAutoML:
             raise ValueError("At least one numeric feature is required by the baseline AutoML engine")
         y = LabelEncoder().fit_transform(frame[target])
         candidates = list(build_models(self.config.random_state).items())[: self.config.max_models]
-        folds = min(self.config.folds, min(np.bincount(y)))
+        folds = min(self.config.folds, *np.bincount(y))
         rows = []
         started = perf_counter()
         cv = StratifiedKFold(n_splits=max(2, folds), shuffle=True, random_state=self.config.random_state)

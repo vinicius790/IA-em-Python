@@ -39,7 +39,7 @@ Requer Python 3.11 ou mais novo:
 
 1. **Clonar e Criar o Ambiente Virtual:**
    ```bash
-   git clone https://github.com/seu-usuario/IA-em-Python.git && cd IA-em-Python
+   git clone https://github.com/vinicius790/IA-em-Python.git && cd IA-em-Python
    python -m venv .venv
    # Windows: .venv\Scripts\activate
    # Linux/macOS: source .venv/bin/activate

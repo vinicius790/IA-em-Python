@@ -540,6 +540,7 @@ class MLService:
             canary_id=canary.id if canary else None,
             canary_arm=arm if canary else None,
         )[0]
+        result: dict[str, Any] = dict(result)
         result["arm"] = arm
         result["canary_id"] = canary.id if canary else None
         if canary is not None and arm == "candidate" and self._canary_ready(db, canary):
@@ -695,7 +696,8 @@ class MLService:
                 measured_latency = round((perf_counter() - started) * 1000 / len(uncached_indexes), 4)
                 for offset, position in enumerate(uncached_indexes):
                     probability_map = {
-                        label: round(float(p), 8) for label, p in zip(labels, probabilities[offset], strict=True)
+                        label: round(float(p), 8)
+                        for label, p in zip(labels, probabilities[offset], strict=True)
                     }
                     confidence = max(probability_map.values())
                     predicted_class = classes[offset]

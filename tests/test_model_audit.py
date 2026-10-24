@@ -1,7 +1,6 @@
 """Testes do Módulo de Auditoria e Governança de Modelos (Model Audit Report)."""
 
 import json
-from pathlib import Path
 
 import pytest
 from sklearn.linear_model import LogisticRegression

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import json
+import math
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from time import perf_counter
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
-import math
 import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
@@ -32,7 +33,13 @@ from . import (
 )
 from .config import get_settings
 from .data import FEATURE_COLUMNS, load_iris_dataframe
-from .database import database_ok
+from .database import database_ok, init_db
+from .errors import (
+    ArtifactIntegrityError,
+    CanaryConflictError,
+    FeatureMismatchError,
+    ModelNotFoundError,
+)
 from .features.feature_store import get_feature_store
 from .governance.fairness import audit_fairness
 from .modeling.explainability import compute_kernel_shap
@@ -56,7 +63,16 @@ rate_limiter = RateLimiter(
     window_seconds=settings.rate_limit_window_seconds,
 )
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Aplica as migrações Alembic antes de servir: a API sobe com o schema completo."""
+    init_db()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title=settings.app_name,
     version=__version__,
     description=(
@@ -98,7 +114,9 @@ class ObservabilityAndSecurityMiddleware(BaseHTTPMiddleware):
         request.state.request_id = request_id
 
         # 1. Rate limiting por cliente
-        client_key = request.headers.get("x-api-key") or (request.client.host if request.client else "unknown")
+        client_key = request.headers.get("x-api-key") or (
+            request.client.host if request.client else "unknown"
+        )
         if not rate_limiter.allow(client_key):
             response = JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -128,18 +146,11 @@ class ObservabilityAndSecurityMiddleware(BaseHTTPMiddleware):
         return response
 
 
-from .errors import (
-    ArtifactIntegrityError,
-    CanaryConflictError,
-    FeatureMismatchError,
-    GateFailedError,
-    ModelNotFoundError,
-)
-
-
 @app.exception_handler(ModelNotFoundError)
 async def model_not_found_handler(request: Request, exc: ModelNotFoundError) -> JSONResponse:
-    request_id = getattr(request.state, "request_id", None) or sanitize_request_id(request.headers.get("x-request-id"))
+    request_id = getattr(request.state, "request_id", None) or sanitize_request_id(
+        request.headers.get("x-request-id")
+    )
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content={"detail": str(exc), "request_id": request_id},
@@ -149,7 +160,9 @@ async def model_not_found_handler(request: Request, exc: ModelNotFoundError) -> 
 
 @app.exception_handler(ArtifactIntegrityError)
 async def artifact_integrity_handler(request: Request, exc: ArtifactIntegrityError) -> JSONResponse:
-    request_id = getattr(request.state, "request_id", None) or sanitize_request_id(request.headers.get("x-request-id"))
+    request_id = getattr(request.state, "request_id", None) or sanitize_request_id(
+        request.headers.get("x-request-id")
+    )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": str(exc), "request_id": request_id},
@@ -159,9 +172,11 @@ async def artifact_integrity_handler(request: Request, exc: ArtifactIntegrityErr
 
 @app.exception_handler(FeatureMismatchError)
 async def feature_mismatch_handler(request: Request, exc: FeatureMismatchError) -> JSONResponse:
-    request_id = getattr(request.state, "request_id", None) or sanitize_request_id(request.headers.get("x-request-id"))
+    request_id = getattr(request.state, "request_id", None) or sanitize_request_id(
+        request.headers.get("x-request-id")
+    )
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={"detail": str(exc), "request_id": request_id},
         headers={"X-Request-ID": request_id},
     )
@@ -169,7 +184,9 @@ async def feature_mismatch_handler(request: Request, exc: FeatureMismatchError) 
 
 @app.exception_handler(CanaryConflictError)
 async def canary_conflict_handler(request: Request, exc: CanaryConflictError) -> JSONResponse:
-    request_id = getattr(request.state, "request_id", None) or sanitize_request_id(request.headers.get("x-request-id"))
+    request_id = getattr(request.state, "request_id", None) or sanitize_request_id(
+        request.headers.get("x-request-id")
+    )
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={"detail": str(exc), "request_id": request_id},
@@ -195,11 +212,13 @@ def _sanitize_err_value(val: Any) -> Any:
 
 @app.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    request_id = getattr(request.state, "request_id", None) or sanitize_request_id(request.headers.get("x-request-id"))
+    request_id = getattr(request.state, "request_id", None) or sanitize_request_id(
+        request.headers.get("x-request-id")
+    )
     sanitized_errors = jsonable_encoder(_sanitize_err_value(exc.errors()))
     headers = {"X-Request-ID": request_id} if request_id else {}
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={"detail": sanitized_errors},
         headers=headers,
     )
@@ -214,7 +233,9 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
             content={"detail": exc.detail},
             headers=getattr(exc, "headers", None) or {},
         )
-    request_id = getattr(request.state, "request_id", None) or sanitize_request_id(request.headers.get("x-request-id"))
+    request_id = getattr(request.state, "request_id", None) or sanitize_request_id(
+        request.headers.get("x-request-id")
+    )
     logger.exception("unhandled_error", exc_info=exc, request_id=request_id)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -240,17 +261,17 @@ if settings.cors_origins:
 
 
 @app.get("/", include_in_schema=False)
-def root() -> Dict[str, str]:
+def root() -> dict[str, str]:
     return {"status": "ok", "version": __version__}
 
 
 @app.get("/healthz", tags=["system"])
-def healthz() -> Dict[str, str]:
+def healthz() -> dict[str, str]:
     return {"status": "ok", "version": __version__}
 
 
 @app.get("/readyz", tags=["system"])
-def readyz() -> Dict[str, Any]:
+def readyz() -> dict[str, Any]:
     db_ok = database_ok()
     return {"status": "ready" if db_ok else "not_ready", "database": db_ok}
 
@@ -276,35 +297,51 @@ app.include_router(api_v8.router, dependencies=[Depends(require_api_key)])
 
 class OnlineLookupRequest(BaseModel):
     view_name: str = Field(default="iris_measurements", description="Nome da Feature View cadastrada")
-    entity_keys: List[Any] = Field(..., description="Chaves primárias de identificação para lookup")
-    features: Optional[List[str]] = Field(default=None, description="Features desejadas (None para todas)")
-    version: Optional[str] = Field(default=None, description="Versão semântica da view (ex: 'v1')")
+    entity_keys: list[Any] = Field(..., description="Chaves primárias de identificação para lookup")
+    features: list[str] | None = Field(default=None, description="Features desejadas (None para todas)")
+    version: str | None = Field(default=None, description="Versão semântica da view (ex: 'v1')")
 
 
 class FairnessAuditRequest(BaseModel):
-    y_true: List[Any] = Field(..., description="Valores reais do rótulo/alvo")
-    y_pred: List[Any] = Field(..., description="Predições emitidas pelo modelo avaliado")
-    protected_attribute: List[Any] = Field(..., description="Valores do atributo protegido (ex: gênero, etnia, idade)")
+    y_true: list[Any] = Field(..., description="Valores reais do rótulo/alvo")
+    y_pred: list[Any] = Field(..., description="Predições emitidas pelo modelo avaliado")
+    protected_attribute: list[Any] = Field(
+        ..., description="Valores do atributo protegido (ex: gênero, etnia, idade)"
+    )
     positive_label: Any = Field(default=1, description="Valor que denota o desfecho favorável/positivo")
-    privileged_group: Optional[Any] = Field(default=None, description="Identificador do grupo privilegiado de referência")
-    disparate_impact_threshold: float = Field(default=0.8, ge=0.0, le=1.0, description="Limiar legal do Impacto Disparate")
-    equal_opportunity_threshold: float = Field(default=0.1, ge=0.0, le=1.0, description="Limiar aceitável da Igualdade de Oportunidade")
-    attribute_name: str = Field(default="protected_attribute", description="Nome semântico do atributo protegido auditado")
+    privileged_group: Any | None = Field(
+        default=None, description="Identificador do grupo privilegiado de referência"
+    )
+    disparate_impact_threshold: float = Field(
+        default=0.8, ge=0.0, le=1.0, description="Limiar legal do Impacto Disparate"
+    )
+    equal_opportunity_threshold: float = Field(
+        default=0.1, ge=0.0, le=1.0, description="Limiar aceitável da Igualdade de Oportunidade"
+    )
+    attribute_name: str = Field(
+        default="protected_attribute", description="Nome semântico do atributo protegido auditado"
+    )
 
 
 class ExplainRequest(BaseModel):
-    instance: Dict[str, float] = Field(
+    instance: dict[str, float] = Field(
         ...,
         description="Medidas numéricas da instância para explicar localmente",
-        json_schema_extra={"example": {"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2}},
+        json_schema_extra={
+            "example": {"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2}
+        },
     )
-    model_name: str = Field(default="logistic_regression", description="Modelo registrado no catálogo a utilizar")
-    target_class: Optional[int] = Field(default=0, description="Índice da classe alvo para decomposição de probabilidades")
+    model_name: str = Field(
+        default="logistic_regression", description="Modelo registrado no catálogo a utilizar"
+    )
+    target_class: int | None = Field(
+        default=0, description="Índice da classe alvo para decomposição de probabilidades"
+    )
     n_samples: int = Field(default=128, ge=16, le=1024, description="Número de amostras para o Kernel SHAP")
 
 
 @app.post("/features/online-lookup", tags=["features"], dependencies=[Depends(require_api_key)])
-def features_online_lookup(request: OnlineLookupRequest) -> Dict[str, Any]:
+def features_online_lookup(request: OnlineLookupRequest) -> dict[str, Any]:
     """Recuperação de atributos em baixa latência (sub-milissegundo) via Feature Store Corporativa."""
     store = get_feature_store()
     try:
@@ -321,14 +358,12 @@ def features_online_lookup(request: OnlineLookupRequest) -> Dict[str, Any]:
         "view_name": request.view_name,
         "results": results,
         "count": len(results),
-        "hit_rate": (
-            round(store.online_store.stats["hits"] / max(1, store.online_store.stats["reads"]), 4)
-        ),
+        "hit_rate": (round(store.online_store.stats["hits"] / max(1, store.online_store.stats["reads"]), 4)),
     }
 
 
 @app.post("/governance/fairness-audit", tags=["governance"], dependencies=[Depends(require_api_key)])
-def governance_fairness_audit(request: FairnessAuditRequest) -> Dict[str, Any]:
+def governance_fairness_audit(request: FairnessAuditRequest) -> dict[str, Any]:
     """Auditoria ética e avaliação de viés algorítmico em atributos protegidos com mitigação."""
     try:
         report = audit_fairness(
@@ -348,7 +383,7 @@ def governance_fairness_audit(request: FairnessAuditRequest) -> Dict[str, Any]:
 
 
 @app.post("/model/explain", tags=["modeling"], dependencies=[Depends(require_api_key)])
-def model_explain(request: ExplainRequest) -> Dict[str, Any]:
+def model_explain(request: ExplainRequest) -> dict[str, Any]:
     """Decomposição local de predições via Kernel SHAP simplificado com atribuição aditiva de features."""
     service = get_service()
     model_record = service.latest_model(request.model_name)
@@ -359,7 +394,7 @@ def model_explain(request: ExplainRequest) -> Dict[str, Any]:
         )
 
     # Carregar modelo salvo
-    loaded = service.load_model(model_record)
+    loaded = service.load(model_record)["model"]
     background_df = load_iris_dataframe()[FEATURE_COLUMNS]
 
     try:
@@ -384,12 +419,12 @@ def model_explain(request: ExplainRequest) -> Dict[str, Any]:
 
 
 class LegacyBatchRequest(BaseModel):
-    data: List[dict]
-    reference_data: Optional[List[dict]] = None
+    data: list[dict]
+    reference_data: list[dict] | None = None
 
 
 @app.post("/predict/batch", include_in_schema=False)
-def legacy_batch_predict(request: LegacyBatchRequest) -> Dict[str, Any]:
+def legacy_batch_predict(request: LegacyBatchRequest) -> dict[str, Any]:
     """Endpoint legado de inferência em lote com análise de drift."""
     if not request.data:
         raise HTTPException(status_code=400, detail="Empty data list")

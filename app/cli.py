@@ -445,8 +445,12 @@ def drift_check_cmd(
             data["status"],
         )
     print(table)
-    status_color = "red" if analysis["status"] == "drift" else ("yellow" if analysis["status"] == "warning" else "green")
-    print(f"[{status_color}]Status Geral de Drift: {analysis['status'].upper()} (Max PSI: {analysis['max_psi']:.4f})[/{status_color}]")
+    status_color = (
+        "red" if analysis["status"] == "drift" else ("yellow" if analysis["status"] == "warning" else "green")
+    )
+    print(
+        f"[{status_color}]Status Geral de Drift: {analysis['status'].upper()} (Max PSI: {analysis['max_psi']:.4f})[/{status_color}]"
+    )
 
 
 @app.command("audit-export")
@@ -478,10 +482,11 @@ def audit_export_cmd(
     )
 
     exported_path = export_audit_report(report, output, format=format)
-    print(f"[bold green]Relatório de auditoria ({format}) exportado com sucesso para: {exported_path}[/bold green]")
+    print(
+        f"[bold green]Relatório de auditoria ({format}) exportado com sucesso para: {exported_path}[/bold green]"
+    )
     print(f"Veredito de Governança: [bold]{report.overall_status}[/bold]")
 
 
 if __name__ == "__main__":
     app()
-
