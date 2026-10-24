@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -29,26 +30,26 @@ class KFoldValidationResult:
     n_splits: int
     stratified: bool
     sample_count: int
-    classes: List[Any]
-    feature_names: List[str]
-    fold_metrics: List[Dict[str, Any]]
-    aggregated_metrics: Dict[str, Dict[str, float]]
-    confusion_matrix: List[List[int]]
+    classes: list[Any]
+    feature_names: list[str]
+    fold_metrics: list[dict[str, Any]]
+    aggregated_metrics: dict[str, dict[str, float]]
+    confusion_matrix: list[list[int]]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 def run_kfold_cross_validation(
     model: Any,
-    X: Union[pd.DataFrame, np.ndarray],
-    y: Union[Sequence[Any], np.ndarray, pd.Series],
+    X: pd.DataFrame | np.ndarray,
+    y: Sequence[Any] | np.ndarray | pd.Series,
     model_name: str = "model",
     n_splits: int = 5,
     stratified: bool = True,
     shuffle: bool = True,
     random_state: int = 42,
-    feature_names: Optional[List[str]] = None,
+    feature_names: list[str] | None = None,
 ) -> KFoldValidationResult:
     """Executa validação cruzada K-Fold (ou Estratificada) com rastreamento completo de métricas.
 
@@ -69,16 +70,18 @@ def run_kfold_cross_validation(
     if n_splits < 2:
         raise ValueError("n_splits deve ser pelo menos 2.")
     if n_splits > sample_count:
-        raise ValueError(f"n_splits ({n_splits}) não pode ser maior que o número de amostras ({sample_count}).")
+        raise ValueError(
+            f"n_splits ({n_splits}) não pode ser maior que o número de amostras ({sample_count})."
+        )
 
     if stratified and len(classes) > 1:
         cv = StratifiedKFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
     else:
         cv = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
 
-    fold_metrics: List[Dict[str, Any]] = []
+    fold_metrics: list[dict[str, Any]] = []
     oof_preds = np.empty_like(y_arr)
-    metric_accumulators: Dict[str, List[float]] = {
+    metric_accumulators: dict[str, list[float]] = {
         "accuracy": [],
         "balanced_accuracy": [],
         "precision_macro": [],
@@ -129,7 +132,7 @@ def run_kfold_cross_validation(
         )
 
     # Cálculo dos agregados e intervalos de confiança a 95%
-    aggregated_metrics: Dict[str, Dict[str, float]] = {}
+    aggregated_metrics: dict[str, dict[str, float]] = {}
     for metric_name, values in metric_accumulators.items():
         ci = confidence_interval(values, confidence=0.95)
         aggregated_metrics[metric_name] = {

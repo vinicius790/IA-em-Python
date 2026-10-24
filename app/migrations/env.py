@@ -4,7 +4,8 @@ from logging.config import fileConfig
 
 from alembic import context
 
-from app import db_models  # noqa: F401  (registra as tabelas em Base.metadata)
+# Registra as tabelas em Base.metadata.
+from app import db_models  # noqa: F401  # pylint: disable=unused-import
 from app.config import get_settings
 from app.database import Base, engine
 
