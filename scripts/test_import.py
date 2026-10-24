@@ -1,10 +1,12 @@
 import time
 
+
 def check(name, fn):
     t0 = time.perf_counter()
     fn()
     t1 = time.perf_counter()
     print(f"{name}: {t1 - t0:.2f}s", flush=True)
+
 
 print("Starting checks...", flush=True)
 check("pandas", lambda: __import__("pandas"))

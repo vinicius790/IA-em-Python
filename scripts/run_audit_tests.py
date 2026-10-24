@@ -52,15 +52,24 @@ def main():
 
     tests = [
         ("K-Fold Stratified & IC 95%", lambda: test_kfold_cross_validation_stratified(data)),
-        ("K-Fold Unstratified & Validation Errors", lambda: test_kfold_cross_validation_unstratified_and_validation_errors(data)),
-        ("PSI & KS-test Statistical Properties", lambda: test_psi_and_ks_test_statistical_properties()),
-        ("Multivariate Statistical Drift Analysis", lambda: test_statistical_drift_analysis_multivariate(data)),
+        (
+            "K-Fold Unstratified & Validation Errors",
+            lambda: test_kfold_cross_validation_unstratified_and_validation_errors(data),
+        ),
+        ("PSI & KS-test Statistical Properties", test_psi_and_ks_test_statistical_properties),
+        (
+            "Multivariate Statistical Drift Analysis",
+            lambda: test_statistical_drift_analysis_multivariate(data),
+        ),
         ("Explainability Pipeline & Waterfall", lambda: test_explainability_pipeline_and_waterfall(data)),
         ("Explainability Pipeline Tree Models", lambda: test_explainability_pipeline_tree_models(data)),
-        ("Model Audit Report Generation & Export", lambda: test_model_audit_report_generation_and_export(data, tmp_path)),
-        ("CLI Explain Pipeline", lambda: test_cli_explain_pipeline()),
-        ("CLI K-Fold", lambda: test_cli_kfold()),
-        ("CLI Drift Check", lambda: test_cli_drift_check()),
+        (
+            "Model Audit Report Generation & Export",
+            lambda: test_model_audit_report_generation_and_export(data, tmp_path),
+        ),
+        ("CLI Explain Pipeline", test_cli_explain_pipeline),
+        ("CLI K-Fold", test_cli_kfold),
+        ("CLI Drift Check", test_cli_drift_check),
         ("CLI Audit Export", lambda: test_cli_audit_export(tmp_path)),
     ]
 
@@ -75,6 +84,7 @@ def main():
         except Exception as exc:
             print(f"[FAIL] {name}: {exc}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 
