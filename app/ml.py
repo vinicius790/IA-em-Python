@@ -46,7 +46,6 @@ from xgboost import XGBClassifier
 
 from . import __version__
 from .data import FEATURE_COLUMNS, TARGET_COLUMN
-from .explainability import permutation_explanation
 from .lineage import dataset_fingerprint, lineage_record
 from .model_card import create_model_card
 from .monitoring.calibration import multiclass_brier
@@ -329,6 +328,9 @@ def train_model(
     Sem `features`/`target` o treino é o do Iris. Com um dataset do catálogo, o nome
     registrado passa a ser `<dataset>.<modelo>`, para não misturar versões de dados diferentes.
     """
+    # Import tardio: app.modeling importa app.ml (evita ciclo).
+    from .modeling.explainability import permutation_explanation
+
     start = perf_counter()
     quality = validate_training_frame(frame, features, target)
     features = list(features or FEATURE_COLUMNS)
