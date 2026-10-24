@@ -1,0 +1,25 @@
+[MAIN]
+# Pacotes opcionais (extra `boosters`) podem não estar instalados.
+ignored-modules=catboost,lightgbm,optuna,alembic.op,alembic.context
+jobs=0
+
+[MESSAGES CONTROL]
+# Estilo/formatação fica com o ruff (CI); aqui o pylint caça erros reais.
+disable=
+    C,
+    R,
+    fixme,
+    unused-argument,
+    redefined-outer-name,
+    redefined-builtin,
+    broad-exception-caught,
+    import-outside-toplevel,
+    global-statement,
+    W0632,
+
+[FORMAT]
+max-line-length=120
+
+[CLASSES]
+# Convenção scikit-learn: atributos aprendidos (sufixo _) nascem em fit().
+defining-attr-methods=__init__,__new__,setUp,fit
