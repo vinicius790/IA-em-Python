@@ -39,6 +39,11 @@ jobs:
         run: |
           pytest -v
 
+      - name: Testes de tracing com o extra `otel` (OpenTelemetry)
+        run: |
+          pip install -e ".[dev,otel]"
+          pytest -v tests/test_tracing.py tests/test_tracing_noop.py
+
       - name: Validar CLI Avançada (Explicabilidade, K-Fold, Drift, Auditoria)
         run: |
           iris-ai models

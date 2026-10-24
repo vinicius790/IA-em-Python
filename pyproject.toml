@@ -38,6 +38,12 @@ boosters = ["lightgbm>=4.5,<5", "catboost>=1.2,<2"]
 tracking = ["mlflow>=3,<4"]
 # Exportação ONNX e inferência com onnxruntime (backend por versão no registry).
 onnx = ["skl2onnx>=1.17,<2", "onnxruntime>=1.18,<2"]
+# Tracing OpenTelemetry (FastAPI + SQLAlchemy via eventos do engine) com exportador OTLP opcional.
+otel = [
+  "opentelemetry-sdk>=1.27,<2",
+  "opentelemetry-exporter-otlp-proto-http>=1.27,<2",
+  "opentelemetry-instrumentation-fastapi>=0.48b0,<1",
+]
 docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.5,<10"]
 dev = [
   "httpx2>=2.13,<3",
