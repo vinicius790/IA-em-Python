@@ -12,10 +12,9 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from datetime import UTC, datetime
+from typing import Any
 
-import numpy as np
 import pandas as pd
 
 
@@ -26,7 +25,7 @@ class FeatureMetadata:
     name: str
     dtype: str
     description: str = ""
-    unit: Optional[str] = None
+    unit: str | None = None
     nullable: bool = False
 
 
@@ -36,25 +35,25 @@ class FeatureView:
 
     name: str
     version: str = "v1"
-    entity_keys: List[str] = field(default_factory=lambda: ["id"])
-    features: List[FeatureMetadata] = field(default_factory=list)
+    entity_keys: list[str] = field(default_factory=lambda: ["id"])
+    features: list[FeatureMetadata] = field(default_factory=list)
     description: str = ""
     author: str = "ai-team"
-    ttl_seconds: Optional[int] = 86400  # 24 horas por padrão
+    ttl_seconds: int | None = 86400  # 24 horas por padrão
     source_dataset: str = "iris"
     transformation_logic: str = "identity"
-    tags: Dict[str, str] = field(default_factory=dict)
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    tags: dict[str, str] = field(default_factory=dict)
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     @property
-    def feature_names(self) -> List[str]:
+    def feature_names(self) -> list[str]:
         return [f.name for f in self.features]
 
     @property
     def view_id(self) -> str:
         return f"{self.name}:{self.version}"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "version": self.version,
@@ -86,11 +85,11 @@ class OnlineStore:
     def __init__(self) -> None:
         self._lock = threading.RLock()
         # {view_id: {entity_key_str: (values_dict, timestamp_epoch)}}
-        self._store: Dict[str, Dict[str, Tuple[Dict[str, Any], float]]] = {}
+        self._store: dict[str, dict[str, tuple[dict[str, Any], float]]] = {}
         self._stats = {"reads": 0, "hits": 0, "misses": 0, "writes": 0}
 
     @staticmethod
-    def _entity_key(entity: Union[Dict[str, Any], Any], key_names: List[str]) -> str:
+    def _entity_key(entity: dict[str, Any] | Any, key_names: list[str]) -> str:
         if isinstance(entity, dict):
             return ":".join(str(entity.get(k, "")) for k in key_names)
         return str(entity)
@@ -98,9 +97,9 @@ class OnlineStore:
     def write(
         self,
         view_id: str,
-        records: List[Dict[str, Any]],
-        key_names: List[str],
-        timestamp: Optional[float] = None,
+        records: list[dict[str, Any]],
+        key_names: list[str],
+        timestamp: float | None = None,
     ) -> int:
         """Grava registros na online store com timestamp de atualização."""
         now = timestamp if timestamp is not None else time.time()
@@ -117,14 +116,14 @@ class OnlineStore:
     def read(
         self,
         view_id: str,
-        entity_keys: List[Union[Dict[str, Any], Any]],
-        key_names: List[str],
-        feature_names: Optional[List[str]] = None,
-        ttl_seconds: Optional[int] = None,
-    ) -> List[Optional[Dict[str, Any]]]:
+        entity_keys: list[dict[str, Any] | Any],
+        key_names: list[str],
+        feature_names: list[str] | None = None,
+        ttl_seconds: int | None = None,
+    ) -> list[dict[str, Any] | None]:
         """Recupera features por chave de entidade em milissegundos."""
         now = time.time()
-        results: List[Optional[Dict[str, Any]]] = []
+        results: list[dict[str, Any] | None] = []
 
         with self._lock:
             view_data = self._store.get(view_id, {})
@@ -154,7 +153,7 @@ class OnlineStore:
 
         return results
 
-    def clear(self, view_id: Optional[str] = None) -> None:
+    def clear(self, view_id: str | None = None) -> None:
         with self._lock:
             if view_id:
                 self._store.pop(view_id, None)
@@ -162,7 +161,7 @@ class OnlineStore:
                 self._store.clear()
 
     @property
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         with self._lock:
             total_records = sum(len(v) for v in self._store.values())
             return {**self._stats, "stored_records": total_records, "view_count": len(self._store)}
@@ -174,7 +173,7 @@ class OfflineStore:
     def __init__(self) -> None:
         self._lock = threading.RLock()
         # {view_id: pd.DataFrame}
-        self._data: Dict[str, pd.DataFrame] = {}
+        self._data: dict[str, pd.DataFrame] = {}
 
     def write(self, view_id: str, frame: pd.DataFrame, timestamp_col: str = "timestamp") -> int:
         """Ingere dados históricos com suporte a append."""
@@ -193,8 +192,8 @@ class OfflineStore:
         self,
         entity_df: pd.DataFrame,
         view_id: str,
-        feature_names: Optional[List[str]] = None,
-        entity_keys: Optional[List[str]] = None,
+        feature_names: list[str] | None = None,
+        entity_keys: list[str] | None = None,
         timestamp_col: str = "timestamp",
     ) -> pd.DataFrame:
         """Point-in-time (as-of) join para evitar data leakage em datasets de treino.
@@ -209,7 +208,9 @@ class OfflineStore:
             feature_df = self._data[view_id].copy()
 
         keys = entity_keys or ["id"]
-        features_to_select = feature_names or [c for c in feature_df.columns if c not in keys and c != timestamp_col]
+        features_to_select = feature_names or [
+            c for c in feature_df.columns if c not in keys and c != timestamp_col
+        ]
 
         # Se não houver coluna de timestamp, faz merge simples nas entity_keys
         if timestamp_col not in entity_df.columns or timestamp_col not in feature_df.columns:
@@ -245,8 +246,8 @@ class FeatureStore:
     """
 
     def __init__(self) -> None:
-        self._views: Dict[str, FeatureView] = {}
-        self._lineage: Dict[str, Dict[str, Any]] = {}
+        self._views: dict[str, FeatureView] = {}
+        self._lineage: dict[str, dict[str, Any]] = {}
         self.online_store = OnlineStore()
         self.offline_store = OfflineStore()
         self._lock = threading.RLock()
@@ -268,7 +269,7 @@ class FeatureStore:
             }
             return view
 
-    def get_view(self, name: str, version: Optional[str] = None) -> Optional[FeatureView]:
+    def get_view(self, name: str, version: str | None = None) -> FeatureView | None:
         """Obtém uma view por nome e versão (se omitida, retorna a mais recente cadastrada)."""
         with self._lock:
             if version:
@@ -277,16 +278,16 @@ class FeatureStore:
             matching = [v for k, v in self._views.items() if v.name == name]
             return matching[-1] if matching else None
 
-    def list_views(self) -> List[Dict[str, Any]]:
+    def list_views(self) -> list[dict[str, Any]]:
         with self._lock:
             return [v.to_dict() for v in self._views.values()]
 
-    def get_lineage(self, view_id: str) -> Optional[Dict[str, Any]]:
+    def get_lineage(self, view_id: str) -> dict[str, Any] | None:
         with self._lock:
             return self._lineage.get(view_id)
 
     # Métodos de conveniência Online
-    def ingest_online(self, view_name: str, records: List[Dict[str, Any]], version: Optional[str] = None) -> int:
+    def ingest_online(self, view_name: str, records: list[dict[str, Any]], version: str | None = None) -> int:
         view = self.get_view(view_name, version)
         if not view:
             raise ValueError(f"Feature view '{view_name}' não encontrada.")
@@ -295,10 +296,10 @@ class FeatureStore:
     def lookup_online(
         self,
         view_name: str,
-        entity_keys: List[Union[Dict[str, Any], Any]],
-        features: Optional[List[str]] = None,
-        version: Optional[str] = None,
-    ) -> List[Optional[Dict[str, Any]]]:
+        entity_keys: list[dict[str, Any] | Any],
+        features: list[str] | None = None,
+        version: str | None = None,
+    ) -> list[dict[str, Any] | None]:
         """Recupera features da online store com checagem de TTL."""
         view = self.get_view(view_name, version)
         if not view:
@@ -316,7 +317,7 @@ class FeatureStore:
         self,
         view_name: str,
         frame: pd.DataFrame,
-        version: Optional[str] = None,
+        version: str | None = None,
         timestamp_col: str = "timestamp",
     ) -> int:
         view = self.get_view(view_name, version)
@@ -328,8 +329,8 @@ class FeatureStore:
         self,
         entity_df: pd.DataFrame,
         view_name: str,
-        features: Optional[List[str]] = None,
-        version: Optional[str] = None,
+        features: list[str] | None = None,
+        version: str | None = None,
         timestamp_col: str = "timestamp",
     ) -> pd.DataFrame:
         view = self.get_view(view_name, version)
@@ -345,7 +346,7 @@ class FeatureStore:
 
 
 # Singleton padrão corporativo
-_default_store: Optional[FeatureStore] = None
+_default_store: FeatureStore | None = None
 _store_lock = threading.Lock()
 
 
@@ -383,8 +384,12 @@ def get_feature_store() -> FeatureStore:
                     features=[
                         FeatureMetadata("sepal_area", "float64", "Área aproximada da sépala"),
                         FeatureMetadata("petal_area", "float64", "Área aproximada da pétala"),
-                        FeatureMetadata("sepal_aspect_ratio", "float64", "Razão comprimento/largura da sépala"),
-                        FeatureMetadata("petal_aspect_ratio", "float64", "Razão comprimento/largura da pétala"),
+                        FeatureMetadata(
+                            "sepal_aspect_ratio", "float64", "Razão comprimento/largura da sépala"
+                        ),
+                        FeatureMetadata(
+                            "petal_aspect_ratio", "float64", "Razão comprimento/largura da pétala"
+                        ),
                     ],
                     description="Atributos matematicamente derivados e interações",
                     author="mlops-architect",

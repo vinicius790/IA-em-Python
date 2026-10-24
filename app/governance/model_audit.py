@@ -13,10 +13,10 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -35,15 +35,15 @@ class ModelAuditReport:
     model_version: str
     generated_at: str
     model_fingerprint: str
-    dataset_quality: Dict[str, Any]
-    cross_validation: Dict[str, Any]
-    explainability: Dict[str, Any]
-    data_drift: Dict[str, Any]
-    governance_checklist: List[Dict[str, Any]]
+    dataset_quality: dict[str, Any]
+    cross_validation: dict[str, Any]
+    explainability: dict[str, Any]
+    data_drift: dict[str, Any]
+    governance_checklist: list[dict[str, Any]]
     overall_status: str  # "APPROVED" | "WARNING" | "REJECTED"
     summary: str
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -52,13 +52,13 @@ def build_model_audit_report(
     model: Any,
     X: pd.DataFrame,
     y: Any,
-    reference_X: Optional[pd.DataFrame] = None,
-    current_X: Optional[pd.DataFrame] = None,
+    reference_X: pd.DataFrame | None = None,
+    current_X: pd.DataFrame | None = None,
     n_splits: int = 5,
     model_version: str = "1.0.0",
 ) -> ModelAuditReport:
     """Constrói a auditoria técnica completa de um modelo."""
-    now_str = datetime.now(timezone.utc).isoformat()
+    now_str = datetime.now(UTC).isoformat()
     feature_names = list(X.columns)
 
     # 1. Impressão digital do modelo
@@ -173,19 +173,19 @@ def build_model_audit_report(
 
 
 class _NumpyEncoder(json.JSONEncoder):
-    def default(self, obj: Any) -> Any:
-        if isinstance(obj, np.integer):
-            return int(obj)
-        if isinstance(obj, np.floating):
-            return float(obj)
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return super().default(obj)
+    def default(self, o: Any) -> Any:
+        if isinstance(o, np.integer):
+            return int(o)
+        if isinstance(o, np.floating):
+            return float(o)
+        if isinstance(o, np.ndarray):
+            return o.tolist()
+        return super().default(o)
 
 
 def export_audit_report(
     report: ModelAuditReport,
-    output_path: Union[str, Path],
+    output_path: str | Path,
     format: str = "json",
 ) -> Path:
     """Exporta o relatório de auditoria para o formato selecionado ('json' ou 'markdown')."""
@@ -244,7 +244,9 @@ def export_audit_report(
         )
 
         for rank, p in enumerate(report.explainability["permutation_importance"], 1):
-            lines.append(f"| #{rank} | `{p['feature']}` | {p['importance_mean']:.4f} | {p['importance_std']:.4f} |")
+            lines.append(
+                f"| #{rank} | `{p['feature']}` | {p['importance_mean']:.4f} | {p['importance_std']:.4f} |"
+            )
 
         lines.extend(
             [
@@ -277,7 +279,7 @@ def export_audit_report(
                 "    KFold --> XAI[Pipeline de Explicabilidade]",
                 "    XAI --> Drift[Detecção de Data Drift PSI & KS]",
                 "    Drift --> Checklist[Checklist de Compliance]",
-                f"    Checklist --> Verdict[\"Veredito: {report.overall_status}\"]",
+                f'    Checklist --> Verdict["Veredito: {report.overall_status}"]',
                 "```",
                 "",
             ]

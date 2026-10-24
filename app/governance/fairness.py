@@ -9,8 +9,9 @@ Implementa:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -70,12 +71,12 @@ class FairnessAuditReport:
 
     protected_attribute: str
     total_samples: int
-    group_metrics: Dict[str, Dict[str, Any]]
+    group_metrics: dict[str, dict[str, Any]]
     fairness_metrics: FairnessMetrics
     status: str
-    recommendations: List[MitigationRecommendation] = field(default_factory=list)
+    recommendations: list[MitigationRecommendation] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "protected_attribute": self.protected_attribute,
             "total_samples": self.total_samples,
@@ -139,11 +140,11 @@ def _compute_group_metrics(
 
 
 def audit_fairness(
-    y_true: Union[Sequence[Any], np.ndarray, pd.Series],
-    y_pred: Union[Sequence[Any], np.ndarray, pd.Series],
-    protected_attribute: Union[Sequence[Any], np.ndarray, pd.Series],
+    y_true: Sequence[Any] | np.ndarray | pd.Series,
+    y_pred: Sequence[Any] | np.ndarray | pd.Series,
+    protected_attribute: Sequence[Any] | np.ndarray | pd.Series,
     positive_label: Any = 1,
-    privileged_group: Optional[Any] = None,
+    privileged_group: Any | None = None,
     disparate_impact_threshold: float = 0.8,
     equal_opportunity_threshold: float = 0.1,
     attribute_name: str = "protected_attribute",
@@ -169,14 +170,18 @@ def audit_fairness(
 
     unique_groups = list(pd.unique(prot))
     if len(unique_groups) < 2:
-        raise ValueError(f"O atributo protegido deve conter pelo menos 2 grupos distintos. Encontrados: {unique_groups}")
+        raise ValueError(
+            f"O atributo protegido deve conter pelo menos 2 grupos distintos. Encontrados: {unique_groups}"
+        )
 
     # Definir grupo privilegiado (se não fornecido, adota o grupo com maior selection rate ou o primeiro com maior n)
     group_subsets = {g: (yt[prot == g], yp[prot == g]) for g in unique_groups}
-    group_metrics_map: Dict[str, GroupConfusionMetrics] = {}
+    group_metrics_map: dict[str, GroupConfusionMetrics] = {}
 
     for g, (g_yt, g_yp) in group_subsets.items():
-        group_metrics_map[str(g)] = _compute_group_metrics(g_yt, g_yp, group_value=g, positive_label=positive_label)
+        group_metrics_map[str(g)] = _compute_group_metrics(
+            g_yt, g_yp, group_value=g, positive_label=positive_label
+        )
 
     if privileged_group is None or str(privileged_group) not in group_metrics_map:
         # Padrão: grupo com maior taxa de aprovação/seleção (selection_rate)
@@ -237,7 +242,7 @@ def audit_fairness(
     )
 
     # Gerar recomendações caso haja disparidade
-    recommendations: List[MitigationRecommendation] = []
+    recommendations: list[MitigationRecommendation] = []
     if overall_status != "compliant":
         if not is_di_compliant:
             recommendations.append(
