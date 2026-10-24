@@ -34,10 +34,11 @@ jobs:
         run: |
           ruff check .
           ruff format --check .
+          mypy
 
       - name: Executar testes automatizados (pytest)
         run: |
-          pytest -v
+          pytest -v --cov --cov-report=term-missing
 
       - name: Testes de tracing com o extra `otel` (OpenTelemetry)
         run: |

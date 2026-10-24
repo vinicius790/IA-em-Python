@@ -12,6 +12,7 @@ from collections import OrderedDict
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import wraps
+from types import EllipsisType
 from typing import Any
 
 from app.platform.hash_utils import canonical_hash
@@ -60,7 +61,7 @@ class PredictionCache:
         self.ttl_seconds = ttl_seconds
         self.precision = precision
 
-        self._cache: OrderedDict[tuple, CacheEntry] = OrderedDict()
+        self._cache: OrderedDict[tuple[Any, ...], CacheEntry] = OrderedDict()
         self._lock = threading.RLock()
 
         self._hits: int = 0
@@ -110,13 +111,13 @@ class PredictionCache:
         features: Sequence[float | int] | Any,
         value: Any,
         *,
-        ttl_seconds: float | None = ...,  # type: ignore
+        ttl_seconds: float | None | EllipsisType = ...,
     ) -> None:
         """Armazena um resultado de inferência no cache."""
         key = make_cache_key(model_name, model_version, features, self.precision)
         now = time.monotonic()
 
-        effective_ttl = self.ttl_seconds if ttl_seconds is ... else ttl_seconds
+        effective_ttl = self.ttl_seconds if isinstance(ttl_seconds, EllipsisType) else ttl_seconds
         expires_at = (now + effective_ttl) if effective_ttl is not None else None
 
         with self._lock:
@@ -220,11 +221,11 @@ def cached_prediction(
     cache: PredictionCache | None = None,
     *,
     ttl_seconds: float | None = None,
-) -> Callable:
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorator para funções de predição com assinatura (model_name, model_version, features, ...)."""
     target_cache = cache or prediction_cache
 
-    def decorator(fn: Callable) -> Callable:
+    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(fn)
         def wrapper(
             model_name: str, model_version: int | str, features: Any, *args: Any, **kwargs: Any

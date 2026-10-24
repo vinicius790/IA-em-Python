@@ -7,7 +7,7 @@ from sklearn.ensemble import IsolationForest
 
 
 def detect_anomalies(
-    frame: pd.DataFrame, contamination: float = "auto", random_state: int = 42
+    frame: pd.DataFrame, contamination: float | str = "auto", random_state: int = 42
 ) -> dict[str, Any]:
     numeric = frame.select_dtypes(include="number")
     if numeric.empty:
