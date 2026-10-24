@@ -97,15 +97,15 @@ def test_prediction_returns_class_version_and_id(client, trained):
 def test_batch_prediction_keeps_order_across_models_and_loads_each_model_once(client, trained, monkeypatch):
     """Regressão: o batch da v1 fazia uma predição (e uma carga de artefato) por item."""
     train(client, "naive_bayes")
-    from app import services
+    from app.ml_service import registry as registry_slice
     from app.services import prediction_cache
 
     prediction_cache.clear()
 
     calls = []
-    original = services.predict_artifact
+    original = registry_slice.predict_artifact
     monkeypatch.setattr(
-        services, "predict_artifact", lambda *args: calls.append(len(args[1])) or original(*args)
+        registry_slice, "predict_artifact", lambda *args: calls.append(len(args[1])) or original(*args)
     )
     items = [
         {**SETOSA, "model_name": "logistic_regression"},
