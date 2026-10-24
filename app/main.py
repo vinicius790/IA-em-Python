@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import math
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from time import perf_counter
 from typing import Any
@@ -31,7 +33,7 @@ from . import (
 )
 from .config import get_settings
 from .data import FEATURE_COLUMNS, load_iris_dataframe
-from .database import database_ok
+from .database import database_ok, init_db
 from .errors import (
     ArtifactIntegrityError,
     CanaryConflictError,
@@ -61,7 +63,16 @@ rate_limiter = RateLimiter(
     window_seconds=settings.rate_limit_window_seconds,
 )
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Aplica as migrações Alembic antes de servir: a API sobe com o schema completo."""
+    init_db()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title=settings.app_name,
     version=__version__,
     description=(
