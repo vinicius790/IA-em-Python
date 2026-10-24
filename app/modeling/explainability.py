@@ -10,9 +10,10 @@ Implementação pura em Python/NumPy:
 from __future__ import annotations
 
 import itertools
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass
-from math import factorial
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from math import comb, factorial
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -30,7 +31,7 @@ class LocalFeatureContribution:
     direction: str  # "positive", "negative", "neutral"
     formatted_str: str  # ex: "petal_length (+0.42)"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -38,16 +39,16 @@ class LocalFeatureContribution:
 class LocalPredictionDecomposition:
     """Decomposição aditiva da predição local do modelo."""
 
-    instance: Dict[str, float]
+    instance: dict[str, float]
     base_value: float  # Valor esperado E[f(X)] sobre o background
     prediction: float  # Predição f(x) para a instância
     reconciled_prediction: float  # base_value + sum(contributions)
-    target_class: Optional[Union[str, int]]
-    contributions: List[LocalFeatureContribution]
+    target_class: str | int | None
+    contributions: list[LocalFeatureContribution]
     formatted_explanation: str  # ex: 'petal_length (+0.42), sepal_width (-0.15)'
-    waterfall_steps: List[Dict[str, Any]]
+    waterfall_steps: list[dict[str, Any]]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "instance": self.instance,
             "base_value": round(self.base_value, 4),
@@ -60,7 +61,7 @@ class LocalPredictionDecomposition:
         }
 
 
-def _predict_output(model: Any, X: Union[pd.DataFrame, np.ndarray], target_class: Optional[int] = None) -> np.ndarray:
+def _predict_output(model: Any, X: pd.DataFrame | np.ndarray, target_class: int | None = None) -> np.ndarray:
     """Obtém as saídas do modelo (probabilidade da classe ou valor contínuo)."""
     if hasattr(model, "predict_proba") and target_class is not None:
         probs = model.predict_proba(X)
@@ -77,9 +78,9 @@ def _predict_output(model: Any, X: Union[pd.DataFrame, np.ndarray], target_class
 def compute_kernel_shap(
     model: Any,
     background: pd.DataFrame,
-    instance: Union[Dict[str, float], Sequence[float], pd.Series],
-    feature_names: Optional[List[str]] = None,
-    target_class: Optional[int] = None,
+    instance: dict[str, float] | Sequence[float] | pd.Series,
+    feature_names: list[str] | None = None,
+    target_class: int | None = None,
     n_samples: int = 128,
     seed: int = 42,
 ) -> LocalPredictionDecomposition:
@@ -112,7 +113,9 @@ def compute_kernel_shap(
 
     # Se n_features <= 10, calcula Shapley exato combinatório
     if n_features <= 10:
-        coalitions = [frozenset(c) for r in range(n_features + 1) for c in itertools.combinations(range(n_features), r)]
+        coalitions = [
+            frozenset(c) for r in range(n_features + 1) for c in itertools.combinations(range(n_features), r)
+        ]
         blocks = []
         for c in coalitions:
             block = bg_mat.copy()
@@ -139,7 +142,9 @@ def compute_kernel_shap(
         # Amostragem de máscaras binárias z' em {0, 1}^M
         z_masks = rng.integers(0, 2, size=(n_samples, n_features))
         # Adicionar máscaras extremas (todas 0 e todas 1)
-        z_masks = np.vstack([np.zeros((1, n_features), dtype=int), np.ones((1, n_features), dtype=int), z_masks])
+        z_masks = np.vstack(
+            [np.zeros((1, n_features), dtype=int), np.ones((1, n_features), dtype=int), z_masks]
+        )
 
         weights = []
         synthetic_evals = []
@@ -149,7 +154,7 @@ def compute_kernel_shap(
                 w = 1e6  # Grande peso para forçar limites
             else:
                 w = (n_features - 1) / (
-                    itertools.comb(n_features, active_count) * active_count * (n_features - active_count)
+                    comb(n_features, active_count) * active_count * (n_features - active_count)
                 )
             weights.append(w)
 
@@ -157,7 +162,9 @@ def compute_kernel_shap(
             block = bg_mat.copy()
             if active_count > 0:
                 block[:, z == 1] = x_vec[z == 1]
-            p_mean = np.mean(_predict_output(model, pd.DataFrame(block, columns=names), target_class=target_class))
+            p_mean = np.mean(
+                _predict_output(model, pd.DataFrame(block, columns=names), target_class=target_class)
+            )
             synthetic_evals.append(p_mean)
 
         W = np.diag(weights)
@@ -178,8 +185,8 @@ def compute_kernel_shap(
     else:
         phi = np.full(n_features, total_diff / n_features)
 
-    contributions: List[LocalFeatureContribution] = []
-    formatted_parts: List[str] = []
+    contributions: list[LocalFeatureContribution] = []
+    formatted_parts: list[str] = []
     sorted_indices = np.argsort(-np.abs(phi))
 
     for idx in sorted_indices:
@@ -203,7 +210,9 @@ def compute_kernel_shap(
         )
 
     # Construção dos passos do Waterfall
-    waterfall_steps = [{"step": "base_value", "value": round(base_value, 4), "cumulative": round(base_value, 4)}]
+    waterfall_steps = [
+        {"step": "base_value", "value": round(base_value, 4), "cumulative": round(base_value, 4)}
+    ]
     cum = base_value
     for c in contributions:
         cum += c.contribution
@@ -214,7 +223,9 @@ def compute_kernel_shap(
                 "cumulative": round(cum, 4),
             }
         )
-    waterfall_steps.append({"step": "final_prediction", "value": round(instance_pred, 4), "cumulative": round(cum, 4)})
+    waterfall_steps.append(
+        {"step": "final_prediction", "value": round(instance_pred, 4), "cumulative": round(cum, 4)}
+    )
 
     formatted_explanation = ", ".join(formatted_parts)
 
@@ -233,11 +244,11 @@ def compute_kernel_shap(
 def pure_permutation_importance(
     model: Any,
     X: pd.DataFrame,
-    y: Union[Sequence[Any], np.ndarray, pd.Series],
-    metric_fn: Optional[Callable[[np.ndarray, np.ndarray], float]] = None,
+    y: Sequence[Any] | np.ndarray | pd.Series,
+    metric_fn: Callable[[np.ndarray, np.ndarray], float] | None = None,
     n_repeats: int = 5,
     seed: int = 42,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Calcula Permutation Feature Importance pura em NumPy sem dependências binárias.
 
     Mede o decréscimo de performance (ex: queda na acurácia) ao embaralhar cada coluna.
@@ -287,14 +298,14 @@ class ExplainabilityReport:
     """Relatório estruturado de explicabilidade global e local."""
 
     model_name: str
-    feature_names: List[str]
-    permutation_importance: List[Dict[str, Any]]
-    model_feature_importance: Optional[List[Dict[str, Any]]]
-    sample_explanations: List[Dict[str, Any]]
-    top_features: List[str]
+    feature_names: list[str]
+    permutation_importance: list[dict[str, Any]]
+    model_feature_importance: list[dict[str, Any]] | None
+    sample_explanations: list[dict[str, Any]]
+    top_features: list[str]
     summary: str
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -311,16 +322,16 @@ class ExplainabilityPipeline:
     def __init__(
         self,
         model: Any,
-        feature_names: List[str],
+        feature_names: list[str],
         model_name: str = "model",
-        background_data: Optional[pd.DataFrame] = None,
+        background_data: pd.DataFrame | None = None,
     ) -> None:
         self.model = model
         self.feature_names = list(feature_names)
         self.model_name = model_name
         self.background_data = background_data
 
-    def extract_model_importance(self) -> Optional[List[Dict[str, Any]]]:
+    def extract_model_importance(self) -> list[dict[str, Any]] | None:
         """Extrai importância nativa do modelo se suportado (árvores ou linear)."""
         estimator = self.model
         if hasattr(estimator, "named_steps") and "model" in estimator.named_steps:
@@ -345,10 +356,7 @@ class ExplainabilityPipeline:
         if hasattr(estimator, "coef_"):
             coefs = np.asarray(estimator.coef_)
             # Para multiclasse pega a magnitude média absoluta dos coeficientes
-            if coefs.ndim > 1:
-                mag = np.mean(np.abs(coefs), axis=0)
-            else:
-                mag = np.abs(coefs)
+            mag = np.mean(np.abs(coefs), axis=0) if coefs.ndim > 1 else np.abs(coefs)
             total = float(np.sum(mag)) if np.sum(mag) > 0 else 1.0
             ranking = [
                 {
@@ -366,10 +374,10 @@ class ExplainabilityPipeline:
     def run_permutation_importance(
         self,
         X: pd.DataFrame,
-        y: Union[Sequence[Any], np.ndarray, pd.Series],
+        y: Sequence[Any] | np.ndarray | pd.Series,
         n_repeats: int = 5,
         seed: int = 42,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Calcula Permutation Importance no conjunto de dados avaliado."""
         return pure_permutation_importance(
             model=self.model,
@@ -381,14 +389,18 @@ class ExplainabilityPipeline:
 
     def explain_instance(
         self,
-        instance: Union[Dict[str, float], Sequence[float]],
-        target_class: Optional[int] = 0,
+        instance: dict[str, float] | Sequence[float],
+        target_class: int | None = 0,
         n_samples: int = 128,
     ) -> LocalPredictionDecomposition:
         """Decompõe uma instância individual em contribuições de Shapley."""
         if self.background_data is None:
             raise ValueError("Background data é obrigatório para decomposição de instâncias locais.")
-        bg = self.background_data[self.feature_names] if all(c in self.background_data.columns for c in self.feature_names) else self.background_data
+        bg = (
+            self.background_data[self.feature_names]
+            if all(c in self.background_data.columns for c in self.feature_names)
+            else self.background_data
+        )
         return compute_kernel_shap(
             model=self.model,
             background=bg,
@@ -401,8 +413,8 @@ class ExplainabilityPipeline:
     def run_pipeline(
         self,
         X: pd.DataFrame,
-        y: Union[Sequence[Any], np.ndarray, pd.Series],
-        sample_instances: Optional[List[Dict[str, float]]] = None,
+        y: Sequence[Any] | np.ndarray | pd.Series,
+        sample_instances: list[dict[str, float]] | None = None,
         n_repeats: int = 5,
         seed: int = 42,
     ) -> ExplainabilityReport:
@@ -411,7 +423,7 @@ class ExplainabilityPipeline:
         model_imp = self.extract_model_importance()
 
         bg = self.background_data if self.background_data is not None else X
-        samples_decomp: List[Dict[str, Any]] = []
+        samples_decomp: list[dict[str, Any]] = []
 
         if sample_instances:
             for inst in sample_instances:
