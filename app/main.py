@@ -24,7 +24,7 @@ from . import __version__, api_v1
 from .api.routers import DOMAIN_ROUTERS
 from .config import get_settings
 from .data import FEATURE_COLUMNS, load_iris_dataframe
-from .database import database_ok, init_db
+from .database import database_ok, engine, init_db
 from .errors import (
     ArtifactIntegrityError,
     CanaryConflictError,
@@ -43,6 +43,7 @@ from .security import (
     sanitize_request_id,
 )
 from .services import get_service
+from .tracing import setup_tracing
 
 settings = get_settings()
 configure_logging(level="DEBUG" if settings.debug else "INFO")
@@ -73,6 +74,8 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+# OpenTelemetry (extra `otel`): no-op sem o extra; exporta OTLP só com endpoint configurado.
+setup_tracing(app, engine)
 
 # ------------------------------------------------------------------ Middlewares
 

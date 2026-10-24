@@ -6,6 +6,8 @@ from time import perf_counter
 import structlog
 from prometheus_client import Counter, Gauge, Histogram
 
+from .tracing import add_trace_id
+
 REQUEST_COUNT = Counter("iris_api_requests_total", "HTTP requests", ["method", "path", "status"])
 REQUEST_LATENCY = Histogram("iris_api_request_duration_seconds", "HTTP request latency", ["method", "path"])
 PREDICTION_COUNT = Counter("iris_predictions_total", "Model predictions", ["model", "predicted_class"])
@@ -28,6 +30,7 @@ def configure_logging(level: str = "INFO") -> None:
         processors=[
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
+            add_trace_id,
             structlog.processors.format_exc_info,
             structlog.processors.JSONRenderer(),
         ],

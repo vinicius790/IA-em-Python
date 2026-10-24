@@ -75,6 +75,7 @@ from .quality import validate_training_frame
 from .registry import ModelRegistry
 from .reports.generator import comparison_report_html
 from .serving.onnx_backend import OnnxPredictor, export_onnx, predict_onnx, resolve_backend
+from .tracing import set_span_attributes, traced
 
 logger = get_logger()
 
@@ -157,10 +158,12 @@ class MLService:
             max_latency_ms=self.settings.gate_max_latency_ms,
         )
 
+    @traced("iris.promote")
     def promote(
         self, db: Session, model_name: str, version: int, stage: str, *, notes: str = "", force: bool = False
     ) -> dict[str, Any]:
         """Muda o estágio; ir para `production` exige passar no release gate (ou `force`)."""
+        set_span_attributes(model_name=model_name, model_version=version, stage=stage, forced=force)
         record = self.registry.get(model_name, version)
         if record is None:
             raise KeyError(f"Model {model_name} version {version} not found")
@@ -585,6 +588,7 @@ class MLService:
 
     # ------------------------------------------------------------------ training
 
+    @traced("iris.train")
     def train(
         self,
         db: Session,
@@ -644,6 +648,11 @@ class MLService:
                     "training_run_id": run.id,
                 },
             )
+            set_span_attributes(
+                model_version=registration["version"],
+                dataset=dataset or IRIS_DATASET,
+                dataset_sha=source["sha256"] if source else result.dataset_hash,
+            )
             run.status = "completed"
             run.metrics = result.metrics
             run.artifact_path = result.artifact_path
@@ -677,11 +686,13 @@ class MLService:
             logger.exception("training_failed", model=model_name, run_id=run.id)
         db.commit()
         db.refresh(run)
+        set_span_attributes(model_name=model_name, run_id=run.id, status=run.status)
         record_audit(db, "training", model=model_name, run_id=run.id, status=run.status)
         return run
 
     # ----------------------------------------------------------------- inference
 
+    @traced("iris.predict")
     def predict_batch(
         self,
         db: Session,
@@ -707,6 +718,7 @@ class MLService:
         for model_name, indexes in positions.items():
             record = (records or {}).get(model_name) or self.serving_record(model_name)
             artifact = self.load(record)
+            set_span_attributes(model_name=model_name, model_version=record["version"], batch_size=len(items))
             for i in indexes:
                 self._check_width(artifact, record, items[i][1])
             labels = [str(label) for label in artifact["label_encoder"].classes_]
@@ -849,6 +861,7 @@ class MLService:
         frame, _, _ = self.dataset_frame(dataset, (record.get("metadata") or {}).get("dataset_sha256"))
         return frame, list(artifact["features"]), artifact["target"]
 
+    @traced("iris.drift")
     def _drift(self, model_name: str, rows: list[PredictionLog]) -> dict[str, Any]:
         if len(rows) < MIN_DRIFT_SAMPLES:
             return {"status": "insufficient_data", "samples": len(rows), "required": MIN_DRIFT_SAMPLES}
@@ -867,6 +880,7 @@ class MLService:
             critical=self.settings.drift_psi_threshold,
         )
         report["samples"] = len(rows)
+        set_span_attributes(model_name=model_name, drift_status=report.get("status"), samples=len(rows))
         return report
 
     def drift_report(self, db: Session, model_name: str) -> dict:
