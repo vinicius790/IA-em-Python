@@ -149,8 +149,8 @@ def statistical_drift_analysis(
 
     for col in cols:
         if col in reference.columns and col in current.columns:
-            ref_vals = reference[col].dropna().values
-            cur_vals = current[col].dropna().values
+            ref_vals = reference[col].dropna().to_numpy(dtype=float)
+            cur_vals = current[col].dropna().to_numpy(dtype=float)
 
             if len(ref_vals) == 0 or len(cur_vals) == 0:
                 continue
