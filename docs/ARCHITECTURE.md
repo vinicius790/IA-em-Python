@@ -30,7 +30,7 @@ flowchart TD
     end
 
     subgraph ServingObservability["4. Inferência e Observabilidade"]
-        InferenceAPI["FastAPI Serving Engine<br/><i>(services.py & api_v1...api_v8)</i>"]
+        InferenceAPI["FastAPI Serving Engine<br/><i>(services.py, ml_service/ & api/routers)</i>"]
         DriftMonitor["Drift Engine (PSI) & Health Scoring<br/><i>(monitoring/drift.py & health.py)</i>"]
         MetricsPrometheus["Métricas Prometheus & MLflow<br/><i>(iris_model_health_score, PSI max)</i>"]
     end
@@ -449,7 +449,7 @@ sequenceDiagram
 
 ## 7. Camada HTTP por Domínio (issue #9)
 
-Os endpoints seguem implementados em `app/api_v1.py` … `app/api_v8.py`, com os mesmos paths públicos. `app/api/__init__.py` mapeia o primeiro segmento após `/api/vN` para um domínio (`SEGMENT_DOMAINS`) e `app/api/routers/{data,training,registry,inference,monitoring,governance,labs}.py` expõem um `APIRouter` por domínio, montados em `app/main.py` com `require_api_key`. Um segmento sem domínio falha na importação; `tests/test_api_domains.py` garante que cada rota pertence a exatamente um domínio e que o OpenAPI (paths e schemas) não muda.
+Os handlers ficam em `app/api/routers/{data,training,registry,inference,monitoring,governance,labs}.py`, cada um com um `APIRouter` do domínio e os mesmos paths públicos `/api/vN/...`, montados em `app/main.py` com `require_api_key`. `app/api/__init__.py` mapeia o primeiro segmento após `/api/vN` para um domínio (`SEGMENT_DOMAINS`) e monta `VERSIONED_ROUTERS` por versão. `app/api_v1.py` … `app/api_v8.py` guardam só helpers compartilhados e expõem `router` por compatibilidade. A lógica de negócio fica em `app/ml_service/` (registry, datasets, comparison, canary, training, inference, data, monitoring), combinada em `MLService` por `app/services.py`, que mantém os nomes públicos de antes. As rotas legadas com sucessora na v8 (`/api/v1/predict`, `/api/v2/explain`, `/api/v3/datasets`) aparecem como `deprecated` no OpenAPI. `tests/test_api_domains.py` garante que cada rota pertence a exatamente um domínio e que o OpenAPI (paths e schemas) não muda.
 
 | Domínio | Segmentos |
 | --- | --- |
