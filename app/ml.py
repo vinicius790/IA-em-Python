@@ -123,7 +123,7 @@ def _optional_boosters(random_state: int) -> dict[str, Any]:
     except ImportError:
         pass
     try:
-        import catboost  # noqa: F401
+        import catboost  # noqa: F401  # pylint: disable=unused-import
 
         result["catboost"] = _pipeline(_CatBoostAdapter(random_seed=random_state), scale=False)
     except ImportError:
@@ -216,7 +216,6 @@ def get_model(name: str, random_state: int = 42) -> Any:
     if name not in models:
         raise ValueError(f"Modelo desconhecido: {name}. Opções: {list(models.keys())}")
     return models[name]
-
 
 
 def _score_dict(y_true, y_pred) -> dict[str, Any]:
