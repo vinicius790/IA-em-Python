@@ -20,17 +20,8 @@ from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Match
 
-from . import (
-    __version__,
-    api_v1,
-    api_v2,
-    api_v3,
-    api_v4,
-    api_v5,
-    api_v6,
-    api_v7,
-    api_v8,
-)
+from . import __version__, api_v1
+from .api.routers import DOMAIN_ROUTERS
 from .config import get_settings
 from .data import FEATURE_COLUMNS, load_iris_dataframe
 from .database import database_ok, init_db
@@ -280,16 +271,10 @@ console_dir = Path(__file__).parent / "console"
 if console_dir.is_dir():
     app.mount("/console", StaticFiles(directory=console_dir, html=True), name="console")
 
-# ------------------------------------------------------------------ Inclusão dos Routers Versionados
+# ------------------------------------------------------------------ Inclusão dos Routers por Domínio
 app.include_router(api_v1.public_router)
-app.include_router(api_v1.router, dependencies=[Depends(require_api_key)])
-app.include_router(api_v2.router, dependencies=[Depends(require_api_key)])
-app.include_router(api_v3.router, dependencies=[Depends(require_api_key)])
-app.include_router(api_v4.router, dependencies=[Depends(require_api_key)])
-app.include_router(api_v5.router, dependencies=[Depends(require_api_key)])
-app.include_router(api_v6.router, dependencies=[Depends(require_api_key)])
-app.include_router(api_v7.router, dependencies=[Depends(require_api_key)])
-app.include_router(api_v8.router, dependencies=[Depends(require_api_key)])
+for _domain in DOMAIN_ROUTERS:
+    app.include_router(_domain.router, dependencies=[Depends(require_api_key)])
 
 
 # ------------------------------------------------------------------ Novos Schemas e Endpoints MLOps/Governança
