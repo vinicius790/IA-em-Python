@@ -1,28 +1,18 @@
 """Camada HTTP organizada por domínio (issue #9).
 
-Os endpoints continuam implementados nos módulos versionados ``app.api_v1`` ..
-``app.api_v8`` (os paths públicos não mudam). Este pacote os reagrupa em
-routers por domínio de negócio, que são o ponto único de montagem em
-``app.main``. Cada rota versionada pertence a exatamente um domínio.
+Os handlers ficam em ``app.api.routers.<domínio>``, com os paths públicos
+versionados (``/api/vN/...``) inalterados. Os módulos ``app.api_v1`` ..
+``app.api_v8`` guardam só helpers compartilhados e, por compatibilidade,
+expõem ``router`` com as rotas da sua versão (ver ``versioned_router``).
+Cada rota versionada pertence a exatamente um domínio.
 """
 
 from __future__ import annotations
 
+from importlib import import_module
+
 from fastapi import APIRouter
 from fastapi.routing import APIRoute
-
-from .. import api_v1, api_v2, api_v3, api_v4, api_v5, api_v6, api_v7, api_v8
-
-VERSIONED_ROUTERS: tuple[APIRouter, ...] = (
-    api_v1.router,
-    api_v2.router,
-    api_v3.router,
-    api_v4.router,
-    api_v5.router,
-    api_v6.router,
-    api_v7.router,
-    api_v8.router,
-)
 
 # Primeiro segmento após ``/api/vN`` -> domínio.
 SEGMENT_DOMAINS: dict[str, str] = {
@@ -70,13 +60,25 @@ def domain_of(path: str) -> str:
         raise ValueError(f"Segmento sem domínio mapeado em {path}; atualize SEGMENT_DOMAINS") from exc
 
 
+def _version_of(path: str) -> int:
+    return int(path.split("/")[2].removeprefix("v"))
+
+
 def build_domain_router(domain: str) -> APIRouter:
-    """Router com as rotas versionadas do domínio, na ordem original de registro."""
+    """Router com as rotas versionadas do domínio (definidas em ``app.api.routers``)."""
     if domain not in DOMAINS:
         raise ValueError(f"Domínio desconhecido: {domain}")
+    return import_module(f"{__name__}.routers.{domain}").router
+
+
+def versioned_router(version: int) -> APIRouter:
+    """Router de compatibilidade com as rotas de ``/api/v{version}``, em ordem de domínio."""
     router = APIRouter()
-    for versioned in VERSIONED_ROUTERS:
-        for route in versioned.routes:
-            if isinstance(route, APIRoute) and domain_of(route.path) == domain:
+    for domain in DOMAINS:
+        for route in build_domain_router(domain).routes:
+            if isinstance(route, APIRoute) and _version_of(route.path) == version:
                 router.routes.append(route)
     return router
+
+
+VERSIONED_ROUTERS: tuple[APIRouter, ...] = tuple(versioned_router(version) for version in range(1, 9))
