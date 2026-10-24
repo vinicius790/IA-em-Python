@@ -1,6 +1,6 @@
 [MAIN]
-# Pacotes opcionais (extra `boosters`) podem não estar instalados.
-ignored-modules=catboost,lightgbm,optuna,alembic.op,alembic.context
+# Pacotes opcionais (extras `boosters` e `onnx`) podem não estar instalados.
+ignored-modules=catboost,lightgbm,optuna,skl2onnx,onnxruntime,alembic.op,alembic.context
 jobs=0
 
 [MESSAGES CONTROL]
