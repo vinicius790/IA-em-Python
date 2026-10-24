@@ -36,6 +36,8 @@ tuning = ["optuna>=4,<6"]
 boosters = ["lightgbm>=4.5,<5", "catboost>=1.2,<2"]
 # Envio das execuções de treino a um servidor MLflow (MLFLOW_TRACKING_URI).
 tracking = ["mlflow>=3,<4"]
+# Exportação ONNX e inferência com onnxruntime (backend por versão no registry).
+onnx = ["skl2onnx>=1.17,<2", "onnxruntime>=1.18,<2"]
 docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.5,<10"]
 dev = [
   "httpx2>=2.13,<3",
