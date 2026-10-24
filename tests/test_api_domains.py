@@ -12,7 +12,7 @@ from app import explainability as legacy_explainability
 from app.api import DOMAINS, VERSIONED_ROUTERS, build_domain_router, domain_of
 from app.api.routers import DOMAIN_ROUTERS
 from app.main import app
-from app.modeling import explainability
+from app.modeling import shapley as explainability
 
 # sha256 do JSON canônico {"paths", "schemas"} do OpenAPI antes da reorganização.
 # Ao mudar o contrato de propósito, atualize com `_contract_digest()`.
