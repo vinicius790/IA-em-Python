@@ -43,7 +43,7 @@ def otlp_endpoint() -> str | None:
 def _trace_api() -> Any:
     if not otel_available():
         return None
-    from opentelemetry import trace  # pylint: disable=import-outside-toplevel,import-error
+    from opentelemetry import trace  # pylint: disable=import-outside-toplevel,import-error,no-name-in-module
 
     return trace
 
@@ -107,7 +107,7 @@ def setup_tracing(app: Any, engine: Any, *, service_name: str = TRACER_NAME) -> 
     e nenhum provider foi definido antes (por testes ou pelo `opentelemetry-instrument`).
     Retorna True quando a instrumentação foi aplicada.
     """
-    # pylint: disable=import-outside-toplevel,import-error
+    # pylint: disable=import-outside-toplevel,import-error,no-name-in-module
     if not otel_available():
         return False
     try:
@@ -127,7 +127,7 @@ def instrument_engine(engine: Any) -> None:
     Usa os eventos públicos do engine em vez de `opentelemetry-instrumentation-sqlalchemy`,
     que ainda não aceita SQLAlchemy 2.1. Idempotente por engine.
     """
-    # pylint: disable=import-outside-toplevel,import-error
+    # pylint: disable=import-outside-toplevel,import-error,no-name-in-module
     from opentelemetry import trace
     from sqlalchemy import event
 
@@ -164,7 +164,7 @@ def instrument_engine(engine: Any) -> None:
 
 
 def _install_otlp_provider(service_name: str) -> None:
-    # pylint: disable=import-outside-toplevel,import-error
+    # pylint: disable=import-outside-toplevel,import-error,no-name-in-module
     from opentelemetry import trace
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.sdk.resources import Resource

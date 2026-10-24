@@ -11,7 +11,7 @@ from .conftest import SETOSA
 pytest.importorskip("opentelemetry.sdk", reason="extra `otel` não instalado")
 pytest.importorskip("opentelemetry.instrumentation.fastapi", reason="extra `otel` não instalado")
 
-# pylint: disable=wrong-import-position,wrong-import-order,import-error
+# pylint: disable=wrong-import-position,wrong-import-order,import-error,no-name-in-module
 from opentelemetry import trace  # noqa: E402
 from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor  # noqa: E402
