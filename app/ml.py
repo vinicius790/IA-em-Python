@@ -328,7 +328,7 @@ def train_model(
     registrado passa a ser `<dataset>.<modelo>`, para não misturar versões de dados diferentes.
     """
     # Import tardio: app.modeling importa app.ml (evita ciclo).
-    from .modeling.explainability import permutation_explanation
+    from .modeling.shapley import permutation_explanation
 
     start = perf_counter()
     quality = validate_training_frame(frame, features, target)

@@ -1,5 +1,5 @@
-"""Compatibilidade: a explicabilidade foi unificada em ``app.modeling.explainability``."""
+"""Compatibilidade: a explicabilidade foi unificada em ``app.modeling.shapley``."""
 
-from .modeling.explainability import MAX_SHAPLEY_FEATURES, permutation_explanation, shapley_explanation
+from .modeling.shapley import MAX_SHAPLEY_FEATURES, permutation_explanation, shapley_explanation
 
 __all__ = ["MAX_SHAPLEY_FEATURES", "permutation_explanation", "shapley_explanation"]
