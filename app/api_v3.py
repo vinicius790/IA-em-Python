@@ -63,6 +63,6 @@ def register_dataset(db: Session = Depends(get_db)) -> dict:
     return public_record(record)
 
 
-@router.get("/datasets", tags=["data"])
+@router.get("/datasets", tags=["data"], deprecated=True)
 def list_datasets() -> list[dict]:
     return [public_record(record) for record in DatasetCatalog(settings.data_dir).list()]

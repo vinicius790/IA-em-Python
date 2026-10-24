@@ -173,7 +173,7 @@ def training_runs(limit: int = Query(50, ge=1, le=200), db: Session = Depends(ge
     return list(db.scalars(select(TrainingRun).order_by(TrainingRun.id.desc()).limit(limit)).all())
 
 
-@router.post("/predict", response_model=PredictionResponse, tags=["inference"])
+@router.post("/predict", response_model=PredictionResponse, tags=["inference"], deprecated=True)
 def predict(payload: PredictionRequest, request: Request, db: Session = Depends(get_db)):
     return service.predict(
         db,

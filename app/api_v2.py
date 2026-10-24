@@ -226,6 +226,6 @@ def prediction_feedback(prediction_id: int, payload: FeedbackRequest, db: Sessio
     }
 
 
-@router.post("/explain", response_model=ExplainResponse, tags=["explainability"])
+@router.post("/explain", response_model=ExplainResponse, tags=["explainability"], deprecated=True)
 def explain(payload: PredictionRequest) -> ExplainResponse:
     return ExplainResponse(**service.explain(payload.model_name or settings.default_model, payload.as_list()))
