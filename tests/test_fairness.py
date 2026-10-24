@@ -1,11 +1,9 @@
 """Testes automatizados do Módulo de IA Ética, Justiça e Auditoria de Viés (Fairness & Bias Auditor)."""
 
-import numpy as np
 import pytest
 
 from app.governance.fairness import (
     FairnessAuditReport,
-    FairnessMetrics,
     audit_fairness,
 )
 
@@ -95,7 +93,9 @@ def test_fairness_audit_multiclass_groups_and_serialization():
     y_pred = [1, 0, 0, 1, 0, 0, 1, 0, 1]
     prot = ["Jovem", "Jovem", "Jovem", "Adulto", "Adulto", "Adulto", "Idoso", "Idoso", "Idoso"]
 
-    report = audit_fairness(y_true=y_true, y_pred=y_pred, protected_attribute=prot, attribute_name="age_group")
+    report = audit_fairness(
+        y_true=y_true, y_pred=y_pred, protected_attribute=prot, attribute_name="age_group"
+    )
     d = report.to_dict()
 
     assert "protected_attribute" in d

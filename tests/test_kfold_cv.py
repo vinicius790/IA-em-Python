@@ -1,7 +1,6 @@
 """Testes do Motor de Validação Cruzada K-Fold com Intervalos de Confiança."""
 
 import numpy as np
-import pandas as pd
 import pytest
 from sklearn.linear_model import LogisticRegression
 
