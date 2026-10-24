@@ -489,7 +489,6 @@ def test_canary_manual_rollback_traffic_change_and_conflicts(client, wines):
 def test_a_canary_is_decided_only_once_under_concurrency(client, wines):
     """Duas decisões sobre o mesmo canário (ex.: duas predições simultâneas da candidata, ou
     uma reversão manual durante a promoção automática): só a primeira mexe no registry."""
-    from app.db_models import CanaryDeployment
     from app.errors import CanaryConflictError
     from app.services import get_service
 

@@ -5,11 +5,9 @@ import pandas as pd
 import pytest
 
 from app.monitoring.drift import (
-    calculate_psi,
     detect_drift,
     drift_report,
     ks_test,
-    psi,
     statistical_drift_analysis,
 )
 
