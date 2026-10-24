@@ -21,7 +21,13 @@ OPENAPI_CONTRACT_SHA256 = "9b8afcccab96aa1d94e3b1d53e068d87b81d6f06dc9b0d48f2049
 
 def _contract_digest() -> str:
     spec = app.openapi()
-    contract = {"paths": spec["paths"], "schemas": spec["components"]["schemas"]}
+    # `deprecated` (parte 2 da #9) é metadado de documentação, não contrato:
+    # removê-lo prova que paths, parâmetros e schemas seguem idênticos.
+    paths = {
+        path: {method: {k: v for k, v in op.items() if k != "deprecated"} for method, op in item.items()}
+        for path, item in spec["paths"].items()
+    }
+    contract = {"paths": paths, "schemas": spec["components"]["schemas"]}
     canonical = json.dumps(contract, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()
 
@@ -76,3 +82,24 @@ def test_build_domain_router_rejects_unknown_domain() -> None:
 def test_legacy_explainability_module_reexports_unified_implementation() -> None:
     assert legacy_explainability.shapley_explanation is explainability.shapley_explanation
     assert legacy_explainability.permutation_explanation is explainability.permutation_explanation
+
+
+SUPERSEDED_BY_V8 = {
+    ("POST", "/api/v1/predict"): "/api/v8/predict",
+    ("POST", "/api/v2/explain"): "/api/v8/explain",
+    ("GET", "/api/v3/datasets"): "/api/v8/datasets",
+}
+
+
+def test_only_routes_superseded_by_v8_are_deprecated() -> None:
+    paths = app.openapi()["paths"]
+    deprecated = {
+        (method.upper(), path)
+        for path, item in paths.items()
+        for method, op in item.items()
+        if op.get("deprecated")
+    }
+    assert deprecated == set(SUPERSEDED_BY_V8)
+    for (method, _), successor in SUPERSEDED_BY_V8.items():
+        assert method.lower() in paths[successor]
+        assert not paths[successor][method.lower()].get("deprecated")
