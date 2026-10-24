@@ -8,15 +8,16 @@ Fornece análise unificada de Data Drift bicaudal e distribuição multivariada:
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 
 def psi(
-    reference: Union[Sequence[float], np.ndarray],
-    current: Union[Sequence[float], np.ndarray],
+    reference: Sequence[float] | np.ndarray,
+    current: Sequence[float] | np.ndarray,
     bins: int = 10,
 ) -> float:
     """Calcula o Population Stability Index (PSI) entre a distribuição de referência e a atual."""
@@ -53,10 +54,10 @@ calculate_psi = psi
 
 
 def ks_test(
-    reference: Union[Sequence[float], np.ndarray],
-    current: Union[Sequence[float], np.ndarray],
+    reference: Sequence[float] | np.ndarray,
+    current: Sequence[float] | np.ndarray,
     alpha: float = 0.05,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Calcula o teste Kolmogorov-Smirnov (KS-test) bicaudal para duas distribuições.
 
     Retorna:
@@ -122,11 +123,11 @@ def ks_test(
 def statistical_drift_analysis(
     reference: pd.DataFrame,
     current: pd.DataFrame,
-    features: Optional[List[str]] = None,
+    features: list[str] | None = None,
     psi_warning: float = 0.10,
     psi_critical: float = 0.25,
     ks_alpha: float = 0.05,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Análise estatística completa de Data Drift combinando PSI e KS-test em cada feature."""
     cols = features or list(reference.select_dtypes(include=[np.number]).columns)
 
@@ -141,8 +142,8 @@ def statistical_drift_analysis(
             "min_ks_p_value": 1.0,
         }
 
-    feature_metrics: Dict[str, Any] = {}
-    drifted_features: List[str] = []
+    feature_metrics: dict[str, Any] = {}
+    drifted_features: list[str] = []
     max_psi = 0.0
     min_ks_p = 1.0
 
@@ -208,10 +209,10 @@ def statistical_drift_analysis(
 def drift_report(
     reference: pd.DataFrame,
     current: pd.DataFrame,
-    features: List[str],
+    features: list[str],
     warning: float = 0.10,
     critical: float = 0.25,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Relatório estruturado de drift por coluna com classificação de estabilidade e KS-test."""
     if len(current) < 30:
         return {
@@ -243,7 +244,9 @@ def drift_report(
     }
 
 
-def detect_drift(reference_data: pd.DataFrame, current_data: pd.DataFrame, threshold: float = 0.25) -> Dict[str, Any]:
+def detect_drift(
+    reference_data: pd.DataFrame, current_data: pd.DataFrame, threshold: float = 0.25
+) -> dict[str, Any]:
     """Detecta Data Drift usando PSI e KS-test para colunas numéricas (compatibilidade)."""
     analysis = statistical_drift_analysis(
         reference=reference_data,

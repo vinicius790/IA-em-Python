@@ -226,7 +226,9 @@ def cached_prediction(
 
     def decorator(fn: Callable) -> Callable:
         @wraps(fn)
-        def wrapper(model_name: str, model_version: int | str, features: Any, *args: Any, **kwargs: Any) -> Any:
+        def wrapper(
+            model_name: str, model_version: int | str, features: Any, *args: Any, **kwargs: Any
+        ) -> Any:
             cached = target_cache.get(model_name, model_version, features)
             if cached is not None:
                 return cached
