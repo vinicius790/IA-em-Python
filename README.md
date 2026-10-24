@@ -31,6 +31,7 @@ Versão atual: **8.2.0** (veja o [CHANGELOG](CHANGELOG.md)).
 | Inferência | Predição unitária e em lote (uma predição vetorizada por modelo), log de cada predição |
 | Monitoramento | Confiança média, latência p50/p95, acurácia a partir de rótulos enviados como feedback, drift PSI contra o dataset de referência, SLOs e nota de saúde com cada desconto identificado; snapshots persistidos e publicados no Prometheus |
 | Labs | AutoML tabular por validação cruzada, classificador de texto TF-IDF, previsão de séries com backtest, dados sintéticos, matriz de experimentos, robustez a ruído, varredura de PII, SBOM, busca TF-IDF na documentação, grafo de linhagem |
+| Tracing | OpenTelemetry opcional (extra `otel`): spans de FastAPI, SQL, treino, predição, drift e promoção com `model_version` e `dataset_sha`; `trace_id` nos logs JSON e na auditoria; OTLP só com `OTEL_EXPORTER_OTLP_ENDPOINT` |
 | Operação | Métricas Prometheus por rota, painel Grafana provisionado, Dockerfile multi-stage, Compose, chart Helm e Terraform que instala o chart |
 
 ## ⚡ Quick Start (Início Rápido em 3 Passos)
@@ -62,7 +63,7 @@ Na primeira execução o banco SQLite (`data/iris.db`) é criado pelas migraçõ
 `models/` e relatórios para `artifacts/` (ambos ignorados pelo git).
 
 Extras opcionais: `pip install -e ".[tuning]"` (Optuna), `".[boosters]"` (LightGBM e CatBoost),
-`".[tracking]"` (MLflow), `".[docs]"` (MkDocs).
+`".[tracking]"` (MLflow), `".[otel]"` (OpenTelemetry; exporta via OTLP só com `OTEL_EXPORTER_OTLP_ENDPOINT` definida), `".[docs]"` (MkDocs).
 
 ### Autenticação
 
