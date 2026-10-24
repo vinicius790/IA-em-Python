@@ -74,6 +74,7 @@ from .platform.hash_utils import canonical_hash
 from .quality import validate_training_frame
 from .registry import ModelRegistry
 from .reports.generator import comparison_report_html
+from .serving.onnx_backend import OnnxPredictor, export_onnx, predict_onnx, resolve_backend
 
 logger = get_logger()
 
@@ -90,6 +91,7 @@ class MLService:
         self.tracker = ExperimentTracker(settings.mlflow_tracking_uri)
         # ponytail: cache sem limite, uma entrada por arquivo de artefato já servido.
         self._artifacts: dict[str, tuple[tuple[str, int], dict[str, Any]]] = {}
+        self._onnx_sessions: dict[str, tuple[tuple[str | None, int], OnnxPredictor]] = {}
 
     # ------------------------------------------------------------------ registry
 
@@ -118,6 +120,34 @@ class MLService:
         artifact = load_artifact(path)
         self._artifacts[str(path)] = (stamp, artifact)
         return artifact
+
+    def predict_rows(
+        self, record: dict[str, Any], artifact: dict[str, Any], rows: list[list[float]]
+    ) -> tuple[list[str], Any]:
+        """Prediz pelo backend da versão (`serving_backend`); fallback para sklearn é logado."""
+        decision = resolve_backend(self.registry, record)
+        if decision.backend == "onnx" and decision.onnx_path is not None:
+            key = str(decision.onnx_path)
+            stamp = (record.get("onnx_checksum_sha256"), decision.onnx_path.stat().st_mtime_ns)
+            cached = self._onnx_sessions.get(key)
+            if not cached or cached[0] != stamp:
+                cached = (stamp, OnnxPredictor(decision.onnx_path))
+                self._onnx_sessions[key] = cached
+            return predict_onnx(cached[1], artifact, rows)
+        return predict_artifact(artifact, rows)
+
+    def export_onnx(self, model_name: str, version: int, *, activate: bool = False) -> dict[str, Any]:
+        """Exporta a versão para ``model.onnx`` no registry; com `activate`, serve via ONNX."""
+        record = self.registry.get(model_name, version)
+        if record is None:
+            raise ModelNotFoundError(f"Model {model_name} version {version} not found")
+        artifact = self.load(record)
+        target = self.registry.directory / f"{Path(record['artifact_path']).stem}.onnx"
+        export_onnx(artifact, target)
+        record = self.registry.attach_onnx(model_name, version, target)
+        if activate:
+            record = self.registry.set_serving_backend(model_name, version, "onnx")
+        return record
 
     def release_gate(self, record: dict[str, Any]) -> dict[str, Any]:
         return evaluate_release_gate(
@@ -692,7 +722,9 @@ class MLService:
 
             if uncached_indexes:
                 started = perf_counter()
-                classes, probabilities = predict_artifact(artifact, [items[i][1] for i in uncached_indexes])
+                classes, probabilities = self.predict_rows(
+                    record, artifact, [items[i][1] for i in uncached_indexes]
+                )
                 measured_latency = round((perf_counter() - started) * 1000 / len(uncached_indexes), 4)
                 for offset, position in enumerate(uncached_indexes):
                     probability_map = {
@@ -742,9 +774,10 @@ class MLService:
 
     def score_dataframe(self, model_name: str, frame: pd.DataFrame) -> pd.DataFrame:
         """Pontua um DataFrame fora da API (CLI `batch-score`), sem gravar logs de predição."""
-        artifact = self.load(self.serving_record(model_name))
-        classes, probabilities = predict_artifact(
-            artifact, frame[artifact["features"]].astype(float).values.tolist()
+        record = self.serving_record(model_name)
+        artifact = self.load(record)
+        classes, probabilities = self.predict_rows(
+            record, artifact, frame[artifact["features"]].astype(float).values.tolist()
         )
         return frame.assign(prediction=classes, confidence=probabilities.max(axis=1))
 

@@ -150,6 +150,56 @@ class ModelRegistry:
             self._write(records)
         return target
 
+    def _sign_onnx(self, record: dict[str, Any]) -> str:
+        message = f"{record['name']}:{record['version']}:onnx:{record['onnx_checksum_sha256']}".encode()
+        return hmac.new(self._signing_key, message, "sha256").hexdigest()
+
+    def onnx_file(self, record: dict[str, Any]) -> Path | None:
+        """Caminho do ``model.onnx`` opcional da versão, sempre dentro do registry."""
+        name = record.get("onnx_artifact_path")
+        return self.directory / Path(name).name if name else None
+
+    def attach_onnx(self, model_name: str, version: int, onnx_path: str | Path) -> dict[str, Any]:
+        """Anexa o ``model.onnx`` à versão, com SHA-256 (e assinatura) próprios."""
+        source = Path(onnx_path)
+        if source.resolve().parent != self.directory.resolve():
+            raise ValueError(f"Artifact must be inside the registry directory: {source}")
+        with self._locked():
+            records = self._read()
+            target = next((r for r in records if r["name"] == model_name and r["version"] == version), None)
+            if target is None:
+                raise KeyError(f"Model {model_name} version {version} not found")
+            target["onnx_artifact_path"] = source.name
+            target["onnx_checksum_sha256"] = sha256_file(source)
+            if self._signing_key:
+                target["onnx_signature"] = self._sign_onnx(target)
+            self._write(records)
+        return target
+
+    def set_serving_backend(self, model_name: str, version: int, backend: str) -> dict[str, Any]:
+        """Define o backend de inferência da versão: ``sklearn`` (padrão) ou ``onnx``."""
+        if backend not in ("sklearn", "onnx"):
+            raise ValueError(f"Invalid backend '{backend}'. Use one of: onnx, sklearn")
+        with self._locked():
+            records = self._read()
+            target = next((r for r in records if r["name"] == model_name and r["version"] == version), None)
+            if target is None:
+                raise KeyError(f"Model {model_name} version {version} not found")
+            if backend == "onnx" and not target.get("onnx_artifact_path"):
+                raise ValueError(f"{target['alias']} has no ONNX artifact; attach one first")
+            target["serving_backend"] = backend
+            self._write(records)
+        return target
+
+    def verify_onnx(self, record: dict[str, Any]) -> bool:
+        """Mesma verificação do pickle (checksum + assinatura HMAC), para o ``model.onnx``."""
+        path = self.onnx_file(record)
+        if path is None or not path.is_file() or sha256_file(path) != record.get("onnx_checksum_sha256"):
+            return False
+        if not self._signing_key:
+            return True
+        return hmac.compare_digest(str(record.get("onnx_signature", "")), self._sign_onnx(record))
+
     def verify(self, record: dict[str, Any]) -> bool:
         """Confere o checksum e, se houver chave configurada, a assinatura HMAC.
 
