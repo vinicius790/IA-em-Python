@@ -447,3 +447,17 @@ def test_lineage_graph_comes_from_the_registry(client, trained):
     assert any(
         edge["relation"] == "trained" and edge["source"].startswith("dataset:") for edge in graph["edges"]
     )
+
+
+def test_model_explain_endpoint_returns_additive_decomposition(client, trained):
+    """Regressão: /model/explain chamava `MLService.load_model` (inexistente) e
+    `itertools.comb` (inexistente), quebrando com AttributeError."""
+    response = client.post(
+        "/model/explain",
+        json={
+            "model_name": "logistic_regression",
+            "instance": {"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2},
+            "n_samples": 32,
+        },
+    )
+    assert response.status_code == 200, response.text

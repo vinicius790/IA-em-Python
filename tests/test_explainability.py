@@ -1,7 +1,5 @@
 """Testes automatizados do Módulo de Explicabilidade Avançada de Modelos (XAI)."""
 
-import numpy as np
-import pandas as pd
 import pytest
 from sklearn.linear_model import LogisticRegression
 
@@ -24,7 +22,7 @@ def iris_model():
 
 
 def test_kernel_shap_additive_reconciliation_and_formatting(iris_model):
-    model, X, y = iris_model
+    model, X, _ = iris_model
     background = X.sample(30, random_state=42)
     # Instância típica de setosa
     instance = {"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2}
