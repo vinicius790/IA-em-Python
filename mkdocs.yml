@@ -8,8 +8,9 @@ plugins:
   - search
 nav:
   - Início: index.md
-  - Arquitetura: arquitetura.md
-  - Arquitetura MLOps & Dados: ARCHITECTURE.md
+  - Arquitetura:
+      - Visão geral: arquitetura.md
+      - MLOps e dados: ARCHITECTURE.md
   - API: api.md
   - MLOps: mlops.md
   - Datasets, canário e papéis: datasets-canario-papeis.md
