@@ -1,0 +1,27 @@
+name: Bug
+description: Relatar um erro
+labels: [bug]
+body:
+  - type: textarea
+    id: descricao
+    attributes:
+      label: Descrição
+      description: O que aconteceu e o que era esperado?
+    validations:
+      required: true
+  - type: textarea
+    id: reproducao
+    attributes:
+      label: Como reproduzir
+      placeholder: "1. ...\n2. ..."
+    validations:
+      required: true
+  - type: input
+    id: versao
+    attributes:
+      label: Versão / commit
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      render: text
