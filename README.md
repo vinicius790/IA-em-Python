@@ -36,7 +36,7 @@ Versão atual: **8.2.0** (veja o [CHANGELOG](CHANGELOG.md)).
 
 ## ⚡ Quick Start (Início Rápido em 3 Passos)
 
-Requer Python 3.11 ou mais novo:
+Requer Python 3.12 ou mais novo:
 
 1. **Clonar e Criar o Ambiente Virtual:**
    ```bash
@@ -263,24 +263,33 @@ app/
   main.py            aplicação FastAPI, middleware (request id, rate limit, métricas) e routers
   config.py          configuração por variáveis de ambiente
   security.py        autenticação por API key, rate limiter, limite de corpo
-  api_v1.py … api_v8.py
+  api/routers/       handlers por domínio: data, training, registry, inference,
+                     monitoring, governance, labs
+  api_v1.py … api_v8.py  routers de versão e helpers de compatibilidade
+  ml_service/        MLService dividido em mixins por domínio (dados, treino, registry,
+                     inferência, monitoramento, canário, comparação)
+  services.py        fachada que reexporta MLService e get_service()
   ml.py              catálogo de modelos, treino, tuning, métricas
-  registry.py        registry em arquivo com lock, checksum e assinatura
-  services.py        regras de negócio (treino, inferência, explicação, monitoramento, promoção)
-  explainability.py  importância por permutação e Shapley exato
+  registry.py        registry em arquivo com lock, checksum e assinatura (HMAC)
+  serving/           backend ONNX (skl2onnx + onnxruntime) com fallback para sklearn
+  modeling/          explicabilidade e valores de Shapley
+  tracing.py         OpenTelemetry opcional (import tardio)
   monitoring/        drift PSI, SLOs, nota de saúde, Brier, anomalias
   data_catalog/      perfil, contratos, catálogo, ingestão, dados sintéticos
-  governance/        auditoria, pacote de evidências, PII
+  governance/        auditoria, RBAC, pacote de evidências, PII
   migrations/        migrações Alembic (únicas responsáveis pelo schema)
   console/           console web estático
   …                  automl, nlp, timeseries, research, pipelines, orchestration, search, knowledge
-tests/               testes (pytest)
-scripts/smoke_test.py
+tests/               testes (pytest, cobertura mínima de 90%)
+scripts/             smoke test e utilitários
 docs/                documentação (MkDocs); docs/historico guarda os READMEs das versões 4 a 7
 infra/               chart Helm e Terraform
 ops/                 Prometheus e Grafana
 notebooks/           exploração do dataset e laboratório de treino
 ```
+
+Arquitetura: visão geral em [docs/arquitetura.md](docs/arquitetura.md) e detalhes em
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (o [ARCHITECTURE.md](ARCHITECTURE.md) da raiz aponta para lá).
 
 ## Limitações conhecidas
 
